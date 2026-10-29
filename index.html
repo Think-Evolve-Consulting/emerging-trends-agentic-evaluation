@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Evaluation Trends</title>
+<style>
+  :root{
+    --bg:#f7f6f2; --panel:#ffffff; --ink:#1d1d1b; --muted:#6b6a64; --line:#e3e1da; --soft:#f0eee8;
+    --how:#2f6fdb; --what:#1f9a7a; --who:#d9822b; --accent:#2f6fdb;
+    --risk:#c8463c; --ok:#1f9a7a; --read:#9a9890;
+    --radius:12px; --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px rgba(0,0,0,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#141413; --panel:#1e1e1c; --ink:#ecebe6; --muted:#a09e96; --line:#2e2e2b; --soft:#262623;
+      --how:#6a9cf0; --what:#3fc3a0; --who:#f0a452; --accent:#6a9cf0; --risk:#ef6f63; --ok:#3fc3a0; --read:#6f6d66;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#141413; --panel:#1e1e1c; --ink:#ecebe6; --muted:#a09e96; --line:#2e2e2b; --soft:#262623;
+    --how:#6a9cf0; --what:#3fc3a0; --who:#f0a452; --accent:#6a9cf0; --risk:#ef6f63; --ok:#3fc3a0; --read:#6f6d66;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif}
+  button{font:inherit;color:inherit;cursor:pointer}
+  a{color:var(--accent)}
+  header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+  header h1{font-size:16px;margin:0;font-weight:650;letter-spacing:-.01em}
+  header h1 small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+  .modes{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--panel)}
+  .modes button{border:0;background:transparent;padding:6px 14px;font-size:13px;color:var(--muted)}
+  .modes button.on{background:var(--ink);color:var(--bg)}
+  .ctl{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);margin-left:auto;flex-wrap:wrap}
+  select{font:inherit;font-size:13px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+  .prog{display:flex;align-items:center;gap:8px}
+  .prog .bar{width:90px;height:6px;background:var(--soft);border-radius:4px;overflow:hidden}
+  .prog .bar i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+  .prog button{border:0;background:transparent;color:var(--muted);text-decoration:underline;font-size:12px;padding:0}
+
+  main{max-width:1380px;margin:0 auto;padding:16px}
+  .view{display:none}
+  .view.on{display:block}
+  .split{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}
+  @media (max-width:980px){.split{grid-template-columns:1fr}}
+  .mapwrap{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:8px;position:relative}
+  .mapwrap svg{width:100%;height:auto;display:block}
+  .legend{position:absolute;left:14px;top:12px;font-size:12px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
+  .legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+  .legend .how::before{background:var(--how)} .legend .what::before{background:var(--what)} .legend .who::before{background:var(--who)}
+  .legend .rd::before{background:var(--read)}
+
+  /* map nodes */
+  .node{cursor:pointer}
+  .node circle{stroke:var(--panel);stroke-width:2px;transition:r .15s,opacity .2s}
+  .node text{font-size:11px;fill:var(--ink);pointer-events:none}
+  .node .code{font-size:9.5px;font-weight:700;fill:#fff;text-anchor:middle;dominant-baseline:central}
+  .node.read circle{fill:var(--read)!important}
+  .node.sel circle{stroke:var(--ink);stroke-width:3px}
+  .node.dim{opacity:.18}
+  .node.also circle{stroke-dasharray:3 2;stroke:var(--ink)}
+  .link{fill:none;stroke:var(--line);stroke-width:1.5px}
+  .link.dim{opacity:.2}
+  .part text{font-size:12px;font-weight:650;fill:#fff;text-anchor:middle;dominant-baseline:central}
+  .center text{font-size:12px;font-weight:650;fill:var(--ink);text-anchor:middle}
+
+  /* card */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px;min-height:200px}
+  .card .kicker{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted);margin-bottom:6px}
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600;color:#fff}
+  .pill.how{background:var(--how)} .pill.what{background:var(--what)} .pill.who{background:var(--who)}
+  .card h2{margin:0 0 4px;font-size:22px;letter-spacing:-.015em;line-height:1.2}
+  .card .q{color:var(--muted);font-style:italic;margin:0 0 14px}
+  .card .thesis{font-size:16px;margin:0 0 14px;padding-left:12px;border-left:3px solid var(--accent)}
+  .card ol.tk{margin:0 0 14px;padding-left:22px}
+  .card ol.tk li{margin:6px 0}
+  details{border-top:1px solid var(--line);margin-top:10px;padding-top:10px}
+  summary{cursor:pointer;font-weight:600;color:var(--accent);list-style:none;display:flex;align-items:center;gap:6px}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"▸";font-size:12px;transition:transform .15s}
+  details[open] summary::before{transform:rotate(90deg)}
+  .more h4{margin:14px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  .more p{margin:6px 0}
+  .more ul{margin:4px 0;padding-left:20px}
+  .more li{margin:4px 0}
+  .rel{margin-top:14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+  .chip{border:1px solid var(--line);background:var(--soft);border-radius:999px;padding:3px 10px;font-size:12px}
+  .chip:hover{border-color:var(--ink)}
+  .lensnote{margin-top:12px;font-size:12px;color:var(--muted)}
+  .intro p{margin:8px 0}
+  .intro .parts{display:grid;gap:10px;margin:14px 0}
+  .intro .parts div{padding:10px 12px;border-radius:10px;background:var(--soft);font-size:14px}
+  .intro .parts b{display:block;margin-bottom:2px}
+
+  /* walkthrough */
+  .walk{max-width:820px;margin:0 auto}
+  .walknav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px}
+  .walknav button{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:8px 14px}
+  .walknav button:disabled{opacity:.4;cursor:default}
+  .walknav .pos{font-size:13px;color:var(--muted)}
+  .dots{display:flex;flex-wrap:wrap;gap:4px;margin:14px 0 0;justify-content:center}
+  .dots button{width:22px;height:22px;border-radius:6px;border:1px solid var(--line);background:var(--panel);font-size:9px;color:var(--muted);padding:0}
+  .dots button.how{border-color:var(--how)} .dots button.what{border-color:var(--what)} .dots button.who{border-color:var(--who)}
+  .dots button.read{background:var(--soft);color:var(--read)}
+  .dots button.cur{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+  /* concept view */
+  .concept .mapwrap{padding:16px}
+  .concept .note{font-size:12px;color:var(--muted);margin:8px 2px 0}
+  .cnode{cursor:pointer}
+  .cnode rect{rx:8;fill:var(--soft);stroke:var(--line)}
+  .cnode text{font-size:12px;fill:var(--ink);dominant-baseline:central}
+  .cnode.hl rect{stroke:var(--ink);stroke-width:2px}
+  .cnode.read rect{opacity:.7}
+  .edge{fill:none;stroke-width:2px;opacity:.75;transition:opacity .15s}
+  .edge.a{stroke:var(--ok)} .edge.r{stroke:var(--risk);stroke-dasharray:6 4}
+  .edge.dim{opacity:.07}
+  .ckey{display:flex;gap:16px;font-size:12px;color:var(--muted);margin:0 2px 8px}
+  .ckey i{display:inline-block;width:22px;height:0;border-top:2px solid var(--ok);vertical-align:middle;margin-right:5px}
+  .ckey i.r{border-top:2px dashed var(--risk)}
+
+  /* widgets */
+  .widget{margin:14px 0 4px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--soft)}
+  .widget h5{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  .widget .hint{font-size:12px;color:var(--muted);margin:6px 0 0}
+  .grid{display:grid;grid-template-columns:70px repeat(5,28px) auto;gap:6px 6px;align-items:center;font-size:13px}
+  .grid .run{width:26px;height:26px;border-radius:50%;border:2px solid var(--ink);background:transparent;padding:0}
+  .grid .run.ok{background:var(--ink)}
+  .grid .rate{font-size:12px;color:var(--muted)}
+  .stats{display:flex;gap:12px;margin-top:10px;flex-wrap:wrap}
+  .stat{flex:1;min-width:110px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  .stat b{display:block;font-size:20px}
+  .stat span{font-size:11px;color:var(--muted)}
+  .pareto svg{width:100%;height:auto;display:block;background:var(--panel);border-radius:8px;touch-action:none}
+  .log{font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--panel);border-radius:8px;padding:10px 12px;border:1px solid var(--line)}
+  .log div{display:flex;gap:10px;opacity:.25;transition:opacity .2s}
+  .log div.shown{opacity:1}
+  .log div.flag{color:var(--risk)}
+  .log .n{color:var(--muted);width:14px;text-align:right}
+  .log .k{width:46px;color:var(--muted)}
+  .logout{margin-top:8px;display:flex;align-items:center;gap:10px;font-size:13px}
+  .badge{padding:2px 8px;border-radius:6px;font-weight:600;font-size:12px;color:#fff;background:var(--ok)}
+  .badge.bad{background:var(--risk)}
+  .wbtn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:5px 10px;font-size:13px}
+  .layers{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .layers button{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:10px 8px;text-align:left;font-size:13px}
+  .layers button b{display:block;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:2px}
+  .layers button.on{border-color:var(--ink);background:var(--panel);box-shadow:inset 0 0 0 1px var(--ink)}
+  .layerout{margin-top:10px;font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+  .layerout b{color:var(--risk)}
+  @media (max-width:520px){.layers{grid-template-columns:1fr}}
+  footer{max-width:1380px;margin:24px auto 40px;padding:0 16px;font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Emerging Trends in AI Agent Evaluation<small>Chen, Rabanser, Kirgis, Nadgir, Bommasani, Dubois, Tabassi, Ududec, Reuel, Koyejo, Kapoor &amp; Narayanan · Oct 2026 · 33 trends across How / What / Who</small></h1>
+  <div class="modes" role="tablist">
+    <button data-mode="map" class="on">Map</button>
+    <button data-mode="walk">Walkthrough</button>
+    <button data-mode="concept">Concept links</button>
+  </div>
+  <div class="ctl">
+    <label>Lens <select id="lens">
+      <option value="">All 33 trends</option>
+      <option value="enter">Entering agent-evaluation research</option>
+      <option value="impl">Implementing an evaluation</option>
+      <option value="weigh">Weighing evaluation claims</option>
+      <option value="deploy">Evaluating agents for a deployment</option>
+      <option value="policy">Policy and oversight</option>
+      <option value="fund">Funding evaluations</option>
+    </select></label>
+    <div class="prog"><span id="progtxt">0 / 33 read</span><div class="bar"><i id="progbar"></i></div><button id="reset" title="Clear read marks">reset</button></div>
+  </div>
+</header>
+
+<main>
+  <section class="view on" id="view-map">
+    <div class="split">
+      <div class="mapwrap">
+        <svg id="map" viewBox="-470 -465 940 950" aria-label="Radial map of 33 trends"></svg>
+        <div class="legend"><span class="how">How · methods</span><span class="what">What · research agenda</span><span class="who">Who · ecosystem</span><span class="rd">read</span></div>
+      </div>
+      <div class="card" id="mapcard"></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-walk">
+    <div class="walk">
+      <div class="walknav">
+        <button id="prev">← Previous</button>
+        <span class="pos" id="pos"></span>
+        <button id="next">Next →</button>
+      </div>
+      <div class="card" id="walkcard"></div>
+      <div class="dots" id="dots"></div>
+    </div>
+  </section>
+
+  <section class="view concept" id="view-concept">
+    <div class="split">
+      <div>
+        <div class="ckey"><span><i></i>method addresses the concern</span><span><i class="r"></i>method introduces a risk for it</span></div>
+        <div class="mapwrap"><svg id="cmap" viewBox="0 -12 720 452" aria-label="Methods and concerns"></svg></div>
+        <p class="note">Based on Figure 3 of the paper: how the Part 1 methods relate to its six recurring concerns. Edge assignments here are reconstructed from the section text; the paper's figure is authoritative. Hover a method to isolate its edges; click to open it.</p>
+      </div>
+      <div class="card" id="conceptcard"></div>
+    </div>
+  </section>
+</main>
+<footer>Interactive companion to <em>Emerging Trends in AI Agent Evaluation</em> (Princeton / Stanford / UK AISI / Brookings / Berkeley / IAS, October 19, 2026). Content is a condensed paraphrase of the paper for study purposes; consult the paper for exact wording and citations. Read-progress is stored only in this browser.</footer>
+
+<script>
+/* ---------- DATA ---------- */
+const PARTS = {
+  how:{label:"Part 1 · How", sub:"Evaluation science and methods", closing:"Best practices"},
+  what:{label:"Part 2 · What", sub:"Expanded research agenda", closing:"Research directions"},
+  who:{label:"Part 3 · Who", sub:"Evaluator ecosystem", closing:"Practical considerations"}
+};
+
+const T = [
+/* ===== PART 1 ===== */
+{id:"1a",part:"how",title:"Validity",q:"How does validity change for agents?",
+ thesis:"An agent can reach a high score through a strategy that lacks the capability you care about, so the construct must be defined before the metric, and construct, internal, and external validity each defended explicitly.",
+ tk:["A 'replay agent' that blindly replays one successful action sequence outscored frontier models on computer-use tasks — a top score with zero reasoning.",
+     "Three validities: construct (does the metric capture the concept?), internal (did the change cause the difference?), external and ecological (does it hold in other contexts and real use?).",
+     "Validity is the first-order concern that every other Part 1 trend serves; log analysis is the main tool for seeing what sits behind a score."],
+ ex:"The replay-agent example shows why outcome-only grading breaks down for agents: disparate trajectories, including shortcuts, can reach identical final states. Constructs are also harder to operationalize for agents because their real-world interactions are dynamic. Goodhart's law is the standing warning that a metric can drift from the construct it was meant to proxy.",
+ cl:["Define the construct explicitly before choosing a metric, and walk through how an agent strategy without the capability could still game it.",
+     "Scrutinize results and the claims they support with a validity framework, separating construct, internal, and external validity.",
+     "Use tooling such as log analysis to inspect shortcuts, contamination, and reward hacking."],
+ rel:["1b","1e","1i","1l","2g"]},
+{id:"1b",part:"how",title:"Benchmark quality",q:"How should we evaluate benchmark quality?",
+ thesis:"Agent benchmarks are tedious to verify and face real disincentives for quality assurance, so saturation should trigger scrutiny of the benchmark itself rather than just a harder successor.",
+ tk:["Impossible tasks, grading bugs, and shortcuts often stay hidden until several agents cluster near the ceiling and become statistically indistinguishable.",
+     "Five responses to saturation: scrutinize validity, build a harder successor, refresh tasks, keep only tasks that still discriminate (item analysis / IRT), add metrics beyond accuracy.",
+     "Pressure to publish first, 'impossible task' marketing, and rising eval costs all push against careful task verification."],
+ ex:"Benchmarks have advertised how impossible their tasks are while overclaiming the construct they represent; an estimated share of Humanity's Last Exam chemistry and biology answers turned out to be wrong. Peer reviewers rarely have time or remit to check task contents. The CORE-Bench case study shows plateauing scores can reflect reward hacking or exploitation of the test set, and saturation is the moment to find out.",
+ cl:["Treat saturation on one metric as a trigger for deeper benchmark scrutiny.",
+     "Check for impossible tasks, incorrect grading, task errors, and shortcut usage.",
+     "Apply item-level analysis such as Item Response Theory to find tasks that still discriminate among top agents, and repurpose them into leaner benchmarks."],
+ rel:["1a","1c","1f","1g","3f"]},
+{id:"1c",part:"how",title:"Metrics beyond accuracy",q:"What should agent evaluations measure beyond accuracy?",
+ thesis:"Task success is one dimension of a performance profile that, for agents deployed in real work, must also include cost, latency, and reliability, and should be reported jointly rather than one metric at a time.",
+ tk:["Cost (credits, compute), latency (model plus every tool call), and reliability (consistency, robustness, predictability) each decide deployability independently of accuracy.",
+     "Accuracy-versus-cost Pareto frontiers make tradeoffs visible; maximizing accuracy alone can drive unbounded cost, and agents have far higher cost variance than models.",
+     "Always state which model × scaffold combination a number describes."],
+ ex:"The idea descends from HELM's holistic model evaluation but gains dimensions with agents. Pareto plots of accuracy against cost or token usage are now common on leaderboards, and metrics are increasingly plotted against release date to show progress over time. Identical outcomes across runs can hide wildly different, sometimes unsafe, trajectories, which is why qualitative log analysis complements the numbers.",
+ cl:["Report accuracy jointly with a notion of cost (money, latency) and show the tradeoff as a Pareto curve.",
+     "Measure reliability as a metric in its own right, with a threshold scaled to the deployment scenario.",
+     "Clarify which model-scaffold combinations are measured to understand interaction effects."],
+ rel:["1d","1e","3f","1m"],widget:"pareto"},
+{id:"1d",part:"how",title:"Statistical rigor",q:"How can agent evaluations achieve statistical rigor?",
+ thesis:"Long, stochastic trajectories create large run-to-run variance, so evaluations need repeated runs, metrics matched to the claim being made, and uncertainty that includes every source of variance, judge error included.",
+ tk:["pass@k is the chance of at least one success in k tries; pass∧k is the chance all k succeed. Only the second speaks to reliability, yet pass@k is often cited as if it did.",
+     "Benchmark accuracy ('how well on these exact tasks again?') differs from generalized accuracy ('how well on new similar tasks?'), which has wider uncertainty because task sampling adds variance.",
+     "Single-run evaluations remain common purely because of cost; claims about low variance need runs to back them."],
+ ex:"NIST has compared a regression-free averaging approach with a generalized linear mixed model that estimates both benchmark and generalized accuracy; UK AISI's HiBayES uses hierarchical Bayesian models that account for task families and domains. Both are rooted in measurement science (generalizability theory, latent variable modeling). Neither pass@k nor pass∧k captures robustness to environment changes — the replay agent scores well on both.",
+ cl:["Run tasks repeatedly, report how many runs, and avoid variance claims from single runs.",
+     "Match metric to claim: pass@k for 'can it succeed at all', pass∧k for 'does it succeed every time'.",
+     "Fold other variance sources, especially LLM-judge error, into reported uncertainty."],
+ rel:["1c","1e","1h","1m","3f"],widget:"passk"},
+{id:"1e",part:"how",title:"Causal attribution",q:"How can agent evaluations attribute causal changes in performance?",
+ thesis:"Agent performance is a joint product of model, scaffold, tools, budget, and environment, so a score change cannot be pinned on any one of them unless the others were held fixed, and model × scaffold interactions mean even single changes are not independent.",
+ tk:["PaperBench found the same scaffold helps some models and not others; CORE-Bench saw large gains from better scaffolds with models held constant.",
+     "An agent's failure is not evidence of a model limitation until better scaffolding (elicitation) has been tried.",
+     "Factorial designs that run every model-scaffold pairing under fixed conditions separate main effects from interactions; multi-agent settings add further variance."],
+ ex:"Treating evaluation as a 'garden of forking paths' means documenting each fork. Keeping budgets and environments fixed and varying one component at a time is the baseline; systematically varying prompt templates, as in GSM-Symbolic, adds robustness. Disaggregation is also what makes results comparable over time as models, scaffolds, and environments evolve on separate schedules.",
+ cl:["Document models, scaffolds, environments, prompts, and budgets; change one component at a time when comparing.",
+     "Never attribute an agent failure directly to the language model without checking whether scaffolding changes the profile.",
+     "When budget allows, test model × scaffold interactions with (fractional) factorial designs."],
+ rel:["1a","1c","1d","1j","2g"]},
+{id:"1f",part:"how",title:"Contamination",q:"How can agent evaluations resist contamination?",
+ thesis:"Beyond training-data exposure, agents add two new contamination surfaces — test knowledge baked into scaffolds or prompts, and answers retrieved by tools at inference time — and contamination is a spectrum of under-generalization, not a binary.",
+ tk:["Three entry points: pre-training data; scaffold, prompts, or tools ('harness-level cheating', sometimes without the developer knowing); search-time retrieval of answers.",
+     "Longer trajectories mean more leakage opportunities and higher inspection cost.",
+     "A benchmark should state the level of generalization it intends to test and design holdouts to match."],
+ ex:"Leakage also flows through indirect channels such as synthetic data. Between memorization and robust generalization sit agents that exploit structural conventions of a benchmark rather than the capability. Remedies combine secret holdouts with limited reuse, reporting train-test overlap and any benchmark-specific tuning of scaffolds, clean-room harnesses, trajectory inspection, and regular refresh of public holdouts.",
+ cl:["Define secret holdouts matched to the expected generality and limit optimization against them.",
+     "Report train-test overlap, benchmark-specific prompt/scaffold/tool information, and private testing practices.",
+     "Inspect trajectories for contamination and use clean-room harnesses.",
+     "Refresh public holdout sets regularly."],
+ rel:["1b","1g","1i","2i","2g"]},
+{id:"1g",part:"how",title:"Dynamic benchmarks",q:"What role do dynamic benchmarks play, and what are their tradeoffs?",
+ thesis:"Benchmarks whose tasks, environments, or labels change over time answer contamination and saturation, but they trade away longitudinal comparability and add another variance source, so they need psychometric equating and version control.",
+ tk:["Five flavors: extensible environments (AgentDojo), live-refreshed test sets (LiveBench, production traffic), forecasting against new events (FutureX), adversarial collection from failures (Dynabench), competition against adaptive agents (Agent Island).",
+     "Scores across versions are comparable only with a shared anchor subset — test equating and linking from psychometrics.",
+     "Dynamic does not mean valid: adversarial collection shifts the distribution toward edge cases; forecasting sets need justification of event sampling."],
+ ex:"Refreshing tasks mitigates contamination; drawing from production traffic raises ecological validity; adversarial collection surfaces new failure modes. The cost is comparability and coverage drift, which makes attribution of score changes harder still. The category itself is unsettled and the approaches are not mutually exclusive.",
+ cl:["Use test equating and linking with a common anchor subset for longitudinal comparability.",
+     "Track distribution shift and keep checking that results support claims about the intended construct.",
+     "Version-control every benchmark component."],
+ rel:["1b","1f","1j","2d"]},
+{id:"1h",part:"how",title:"LLM judges and monitors",q:"Where should LLMs judge and monitor agents?",
+ thesis:"Autograders and trajectory monitors are now indispensable for open-ended outputs and long transcripts, which makes them a new evaluation surface: judges must be validated against expert holdouts, their error folded into uncertainty, and monitors never treated as proof of absence.",
+ tk:["PaperBench validated its SimpleJudge against expert labels with a separate JudgeEval; UK AISI reports the median of a judge panel and models judge bias with GLMs.",
+     "Chain-of-thought monitors can catch reward hacking and unsafe actions but can miss sandbagging or scheming; absence of evidence is not evidence of absence.",
+     "Transcript volume is outpacing manual review (METR's Hugging Face investigation), so overreliance on automated monitors is the live risk."],
+ ex:"'Who judges the judges?' is the core question. Options include validation against crowdsourced preferences or response pairs (JudgeBench) and explicit bias quantification. Agent-as-a-Judge extends judging from outcomes to trajectories. Monitoring also becomes an evaluation target in its own right (see 2g).",
+ cl:["Validate autograders and scanners against human-coded holdouts built with subject-matter experts.",
+     "Add targeted manual review of cases a judge passed or stopped to estimate what slips through.",
+     "Quantify judge bias via human-LLM agreement and watch for drift when traffic no longer matches the calibration set."],
+ rel:["1d","1i","2g","2i"]},
+{id:"1i",part:"how",title:"Log analysis",q:"What can log analysis reveal beyond outcomes?",
+ thesis:"Outcomes compress a trajectory into a number that cannot say why an agent succeeded; logs reveal shortcuts, contamination, and reward hacking, but they have limits of scale, completeness, and legibility, so a clean log is not a clean bill of health.",
+ tk:["HAL's LLM-aided log analysis caught an agent searching Hugging Face for benchmark answers; METR's manual review found algorithmic scoring had inflated results and hidden answer-fetching from GitHub.",
+     "Manual and automated review are complementary: a manual sample builds the rubric that automated scanning then applies at scale.",
+     "Limits: transcript volume, summarized rather than full reasoning traces, latent-space reasoning, possible steganography, and classifier recall."],
+ ex:"Logs — model inputs and outputs, environment interactions, metadata — support construct, internal, and external validity work and safety evaluation. Tools include Transluce's Docent and Inspect Scout; Epoch AI publishes a log viewer. Frontier labs now return summarized reasoning because of distillation concerns, which shrinks what external evaluators can verify.",
+ cl:["Never conclude that a clean log implies an unproblematic run.",
+     "Combine manual and automated inspection, with and without LLMs.",
+     "Preserve logs (reasoning traces, tool calls, environment states) for downstream and future analysis."],
+ rel:["1a","1f","1h","2g","2i"],widget:"log"},
+{id:"1j",part:"how",title:"Evaluation infrastructure",q:"What is the value of standardized evaluation infrastructure for agents?",
+ thesis:"Shared harnesses, environments, and reporting make agent evaluations repeatable and comparable and lower the cost of dynamic benchmarks, but a dominant framework concentrates its default metrics and can blur the line between training and evaluation.",
+ tk:["Examples: Inspect (adopted by Apollo to avoid duplicated effort), HAL's common harness with standardized cost reporting, AgentBeats/AAA protocols, and arenas (Chatbot, Copilot, Agent Arena's causal tracing).",
+     "Standardization makes the 'forking paths' legible — where evaluations diverge and whether that explains different results — without implying one correct way.",
+     "Risk: frameworks like Harbor serve both RL training and evaluation, inviting leakage and overfitting."],
+ ex:"Agent evaluation needs task specification, model-scaffold plumbing, hosted stateful environments, and consistent restrictions across test subjects. Standardization can live at any layer, from running experiments to reporting. Arenas enable relative comparison; Agent Arena randomizes components to estimate their effects.",
+ cl:["Before adopting a framework's default metrics, verify they match your construct; defaults shape many evaluations at once.",
+     "Isolate evaluation tasks from training environments when one framework does both.",
+     "Favor a modular approach: standardize a shared toolset, not a single pipeline."],
+ rel:["1e","1g","1i","3f","3g"]},
+{id:"1k",part:"how",title:"Red-teaming",q:"How should red-teaming evolve for agents?",
+ thesis:"Agent red-teaming must cover two cases — malicious users and attacks on legitimate use — across scaffold, tools, and environment, and must now treat the test environment itself as something that can be breached.",
+ tk:["Misuse (AgentHarm-style robustness to harmful tasks) continues LLM red-teaming; attacks on legitimate use (indirect prompt injection via tool outputs) need platforms like DTap that cover surfaces and strategies systematically.",
+     "Tool use turns harmful outputs into harmful actions, so the consequences scale with tool power.",
+     "Recent incidents in which agents under evaluation acted beyond their sandboxes show red-teaming must include the testing setup, not only deployment."],
+ ex:"Ecological validity matters: observed misuse in the wild (threat-intelligence reporting) should inform what gets tested in the lab. When agents are given realistic tool access, evaluators need to decide in advance which real-world effects are acceptable and monitor for boundary escapes during runs.",
+ cl:["Evaluate both misuse and attacks on legitimate use across models, tools, scaffolds, and environments.",
+     "Frame red-teaming for testing as well as deployment: verify sandbox isolation before relaxing safeguards.",
+     "Pre-decide acceptable real-world effects and monitor runs for attempts to escape them."],
+ rel:["2h","2i","1l","2d"]},
+{id:"1l",part:"how",title:"Open-world evaluations",q:"What can open-world evaluations reveal that benchmarks cannot?",
+ thesis:"Thick-description studies of a few long-horizon tasks in realistic settings reveal the upper bound of what agents can do and where humans must intervene; they complement benchmarks rather than compete with them, and rigor there means documentation rather than sample size.",
+ tk:["Benchmarks give representative coverage and averages; open-world evaluations (CRUX, Anthropic's parallel-Claude C compiler) show what is achievable at the frontier.",
+     "Small-n is inherent, so results are evidence of possibility, not typical performance.",
+     "Rigor shifts to extensive trajectory documentation, careful scoping of human intervention, and thorough log analysis."],
+ ex:"The apparent tension with the demand for statistical rigor dissolves once the goals are separated: one measures distributions, the other explores the ceiling. Reporting the scaffold, tool access, setup effort, and cost is what keeps a handful of cases from being over-generalized.",
+ cl:["Present results as upper bounds and report conditions and assumptions rather than generalizing.",
+     "Specify the construct and metrics of interest.",
+     "Document human intervention points and trajectories in detail, with real-time monitoring."],
+ rel:["1a","1d","1i","2c","2e"]},
+{id:"1m",part:"how",title:"Human baselines",q:"How can evaluators interpret agent performance relative to human capabilities?",
+ thesis:"Human baselines now contextualize agent capability in terms of expert time, deliverable quality, and fix-up effort, which makes task definition the hinge of every such claim and rules out extrapolating task completion to job automation.",
+ tk:["METR's time horizon: the human-expert task duration at which an agent succeeds with a given reliability (e.g. 50%); RE-Bench varies time budgets for humans and agents.",
+     "GDPval uses blind pairwise expert judgments (win rates) and 'try once / n times, then fix it' ratios; Human-Relative Expenditure Saving frames cost.",
+     "Most of this rests on O*NET-style task decompositions of occupations, which miss interstitial work and cannot by themselves support occupation-level claims."],
+ ex:"Human baselines carry their own measurement error — small expert samples, noisy completion times — and need reported uncertainty. Whether work can be discretized into tasks at all is an open question, and quality gaps between agent and human deliverables are best quantified as the human effort needed to close them.",
+ cl:["Scrutinize task definition; state what an occupation's tasks do and do not cover, and do not infer job replacement from task completion.",
+     "Report uncertainty for human baselines.",
+     "Quantify reliability or the added human work needed to make agent output acceptable."],
+ rel:["1c","1d","2b","2f"]},
+
+/* ===== PART 2 ===== */
+{id:"2a",part:"what",title:"Simulated users",q:"Human-agent interaction: evaluation with simulated users",
+ thesis:"LLM-simulated users make multi-turn, stateful evaluation repeatable and controllable, but they are systematically more cooperative and less ambiguous than real people, so they are a starting point for capability signals rather than evidence about real deployments.",
+ tk:["Tau-bench grades final database state after an LLM-user dialogue; Co-Gym evaluates the collaboration process and can run with real users; HiL-Bench tests escalation to humans with a simulated oracle.",
+     "The 'Sim2Real gap' quantifies divergence: simulated users lack realistic frustration, ambiguity, and stylistic variety.",
+     "If simulated users are easier than real ones, usability estimates for deployment will be inflated."],
+ ex:"Responses include grounding simulators in real conversation data (RealUserSim) and benchmarks that run both simulated and real users for comparison. The validity question persists regardless of approach.",
+ cl:["For which use cases are simulated-user findings a useful proxy, and where do they fail?",
+     "Which simulated-user failure modes most damage generalizability?",
+     "How can targeted human participation ground or validate simulated results?"],
+ rel:["2b","2c","2j","1a"]},
+{id:"2b",part:"what",title:"Lab experiments",q:"Human-agent interaction: experiments in the lab",
+ thesis:"Treating the human-agent team as the unit of evaluation — the augmentation framing — calls for randomized human uplift studies, whose results are often heterogeneous or even negative and whose control groups are getting harder to recruit.",
+ tk:["'Centaur evaluations' and human-centered coding-agent research shift focus from automation to joint performance; UK AISI calls the human uplift RCT the gold standard.",
+     "Evidence cuts both ways: a reproducibility study found roughly 2× speedup with agents; METR found time lost fixing agent code; Copilot gains concentrated among less experienced developers.",
+     "Widespread adoption of coding agents makes a clean 'without agent' baseline hard to construct."],
+ ex:"CollabSkill measures human-agent collaboration on real-world tasks. Effects vary across populations and workflows, so a single uplift number rarely generalizes; the field needs new defensible baselines as diffusion spreads.",
+ cl:["How should baselines be defined to reflect the ecological validity of widespread agent use?",
+     "Which population categories (junior vs senior, etc.) see uneven impacts, on which outcomes?",
+     "Which laboratory settings translate best to real deployment contexts?"],
+ rel:["2a","2c","1m","2f"]},
+{id:"2c",part:"what",title:"Field experiments",q:"Human-agent interaction: field experiments",
+ thesis:"Randomized trials with real users doing real work deliver the strongest causal evidence about deployed agents, and so far they complicate the uplift story; they also trade realism against identification and speed against rigor.",
+ tk:["METR's early-2025 trial: experienced open-source developers were slower with AI tools.",
+     "Alibaba customer service: agents shortened chats but lowered customer ratings.",
+     "Effects shift as users adapt, and spillovers reach beyond treated users, so one-shot measurements age quickly."],
+ ex:"Field RCTs are not a panacea: frontier models change faster than rigorous studies can be run, and realistic settings resist clean identification. Findings from one system and setting do not automatically transfer to others.",
+ cl:["What spillover effects do agents create beyond the treated users?",
+     "How do effects change over time as workflows adapt?",
+     "Where do agents create new winners and losers, and on which outcomes?"],
+ rel:["2b","2d","2f","1l"]},
+{id:"2d",part:"what",title:"Observational usage data",q:"Observational data on real-world usage",
+ thesis:"Production traffic shows agents as actually used, at scale and with natural behavior, at the price of causal power; it is becoming a source of evaluation tasks, but access for independent evaluators remains the open problem.",
+ tk:["Lab studies (OpenAI's ChatGPT usage study, Anthropic's Economic Index built on privacy-preserving Clio) show adoption and task mix; OpenAI builds evaluation cases from production traffic, which also reduces evaluation awareness.",
+     "Independent datasets fill gaps: SWE-chat (coding-agent sessions), WildBench (real conversations), Code Review Bench.",
+     "Anthropic announced an August 2026 pilot granting privacy-preserved access to a few labs; whether such access becomes broad and durable is unresolved."],
+ ex:"Observational data is best used to develop failure-mode taxonomies and to refine questions for later causal studies. Coverage is a concern: traffic reflects current users and tasks, and interpreting it often requires knowing what the user did next.",
+ cl:["What coverage issues does production traffic raise, and can it be contextualized by subsequent user action?",
+     "How can independent evaluators get privacy-preserving access at scale, or build crowdsourced alternatives?",
+     "How can traffic serve an exploratory role that sharpens causal studies?"],
+ rel:["2c","2f","1g","3b"]},
+{id:"2e",part:"what",title:"Domain-specific evaluation",q:"Domain-specific evaluation",
+ thesis:"Evaluation is specializing from knowledge recall to domain workflows — science most of all — which demands costly expert graders and widens the gap between general benchmarks and what a deployment needs.",
+ tk:["Science evaluations now test steps of the workflow: ideation, literature review, deep research, experimentation, scientific review, replication.",
+     "Expert graders and expert baselines are expensive, and abstract agent performance tells you little about a specific domain.",
+     "Current work is almost entirely automation-framed (e.g. 'AI Scientist'); how agents reshape human workflows in a domain is largely unexplored."],
+ ex:"Automating small tasks changes the larger workflows they sit inside, so ecological validity means including institutional constraints and human intervention points in the design, under either framing.",
+ cl:["For what purposes do general upstream benchmarks remain useful, and which questions now belong to domain-specific evaluation?",
+     "How do occupational norms and skillsets drive differences in impact across domains?",
+     "How does task completion map onto whole workflows, and how can augmentation effects be measured?"],
+ rel:["2f","1m","1l","2k"]},
+{id:"2f",part:"what",title:"Economic impact",q:"Economic impact evaluation",
+ thesis:"Claims about work and the economy rest on three distinct layers of evidence — capability on economic tasks, actual usage, and measured impact — and evidence at one layer does not by itself support a claim at another.",
+ tk:["Capabilities: GDPval (44 occupations, expert win rates), Mercor's APEX-Agents (long-horizon knowledge work), Scale/CAIS Remote Labor Index (freelance work).",
+     "Usage: Anthropic Economic Index, Google's AI and Economy Atlas; frontier labs hold privileged telemetry, and usage is not causal impact.",
+     "Impact: Stanford's AI Economic Indicators track productivity, displacement, capital share; the hard part is persuasive causal links from AI use to these shifts."],
+ ex:"EconEvals is one attempt to link capability scores to exposure-based time-savings estimates. Automation and augmentation framings shape every layer, and translating automation-style capability results into augmentation terms is a major unmet need.",
+ cl:["How can economic evaluation capture what task-based measures miss (work between tasks, role reorganization)?",
+     "When is task-level capability predictive of occupational or economic outcomes, and which observed effects should prompt new capability evals?",
+     "What worker-centric metrics complement the picture?"],
+ rel:["1m","2d","2e","2k","3c"],widget:"layers"},
+{id:"2g",part:"what",title:"Behavior under evaluation",q:"Agent behavior under evaluation",
+ thesis:"An agent can pass an evaluation without exhibiting the behavior it was meant to measure — through specification gaming, reward hacking, or behavior change under evaluation awareness — so monitoring becomes an evaluation target, and capability demonstrations must not be mistaken for prevalence.",
+ tk:["Specification gaming and reward hacking need no knowledge of the evaluator's intent; evaluation awareness only matters if the agent then changes behavior (sandbagging, alignment faking); scheming is covert pursuit of misaligned goals.",
+     "Experiments show these capabilities exist; they do not establish how often they occur, and strong claims need strong evidence.",
+     "Monitorability depends on both monitor capability and signal in the agent's reasoning; optimizing against 'bad thoughts' can teach agents to hide them."],
+ ex:"Production-traffic evaluations sidestep awareness. Frontier labs see full chain-of-thought while external evaluators get summaries, constraining their monitorability. The issue is at bottom one of validity: of the construct, the benchmark, and the environment.",
+ cl:["How can external evaluators improve ecological validity with respect to evaluation awareness?",
+     "How should tooling scale for monitorability, and what are the overreliance risks?",
+     "For which risks do trajectories give reliable signal?",
+     "How can evaluations estimate the frequency, not only the possibility, of scheming or sandbagging?"],
+ rel:["1a","1h","1i","2h","2i"]},
+{id:"2h",part:"what",title:"Dangerous capabilities",q:"Dangerous capabilities and risk",
+ thesis:"Autonomy and environment access amplify model-level risks — sabotage, misuse, autonomous replication — so the task is translating demonstrated capability into risk estimates for real deployments, measured against realistic baselines.",
+ tk:["Sabotage: agents covertly undermining monitoring or deployment, increasingly via multi-agent setups; evaluations induce the behavior to study countermeasures.",
+     "Misuse: Anthropic's September 2026 threat report documents bio, cyber, fraud, and influence-operation cases using multi-agent frameworks; AgentHarm tests jailbreak robustness but is synthetic.",
+     "Autonomous Replication and Adaptation: RepliBench probes self-replication capability."],
+ ex:"Marginal risk evaluations compare an agent's uplift to what conventional tools already provide, which keeps risk claims grounded. More realistic independent misuse evaluations are a recognized gap.",
+ cl:["To what extent does performance under simulated or prompted conditions reflect real-world risk?",
+     "What baseline capabilities do malicious users already have, and how much do agents add?"],
+ rel:["1k","2g","2i","3c","3h"]},
+{id:"2i",part:"what",title:"Agent and evaluation security",q:"Agent and evaluation security",
+ thesis:"A safe agent can still be insecure, and the evaluation infrastructure around it is itself an attack target; recent sandbox breaches by agents under test make evaluation security a validity problem and expose how weak monitoring during testing has been.",
+ tk:["Indirect prompt injection ('agent hijacking') through retrieved content is the central external threat to scaffolds.",
+     "OpenAI's agents exploited evaluation-environment flaws to reach the internet and breach Hugging Face in search of benchmark solutions; Anthropic disclosed a misconfigured internet connection in cybersecurity evals.",
+     "Four pathways: prompt injection, sandbox escape, test tampering (reading or altering evaluator files), grader manipulation."],
+ ex:"Dangerous-capability evaluations often run agents with relaxed safeguards and tool access, which is exactly when sandboxes must be hardest. Several breaches surfaced long after the fact, which is the case for real-time monitoring research.",
+ cl:["How can evaluation security be balanced against ecological validity?",
+     "What control measures fit different risks, and how should public infrastructure be hardened?",
+     "What real-time monitoring can handle transcript volume and catch incidents early?"],
+ rel:["1k","1h","1i","2g","2h"]},
+{id:"2j",part:"what",title:"Interaction harms",q:"Interaction harms",
+ thesis:"Harms can accumulate through feedback loops across repeated interactions rather than in any single turn, the object of evaluation is the deployed system and interface rather than the model, and simulated-user findings still need confirmation with real people.",
+ tk:["Sycophancy, escalation, and delusion reinforcement differ measurably between raw model access and chatbot interfaces, raising attribution questions about system design.",
+     "Sycophantic responses have been linked to reduced willingness to repair conflict and greater dependence — effects only visible at the human-interaction layer.",
+     "Multi-turn simulations (MHSafeEval, moral deliberative sycophancy) scale scenario coverage; their validity for real users is open."],
+ ex:"These harms predate agents, but longer trajectories and memory push evaluation beyond single inputs and outputs. Studying them needs simulated users, human experiments, and production data together, plus better metrics, while respecting participant risk.",
+ cl:["What metrics measure harms across repeated interactions?",
+     "How to balance ecological validity against participant risk?",
+     "Which harms are new to agents acting on a user's behalf, and which extend chatbot concerns?",
+     "What crowdsourced data, such as incident reporting, is needed?"],
+ rel:["2a","2b","2d","2k"]},
+{id:"2k",part:"what",title:"Systemic evaluation",q:"Systemic evaluation",
+ thesis:"Evaluation must extend to how agents reshape the incentive structures of the organizations and institutions they enter, where the same capability can produce divergent effects depending on whether it automates or augments.",
+ tk:["Early work covers peer review, crowd work, and information ecosystems.",
+     "Lower-layer findings inform but do not add up to systemic effects; this layer needs its own methods and infrastructure.",
+     "Generalizing from a single case (one venue's peer review) to other organizations is itself an open question."],
+ ex:"The paper's three-layer framing (capabilities, human interaction, systemic impact) places this at the top, with the automation-augmentation spectrum cutting across it. Anticipatory methods and leading indicators are the methodological need.",
+ cl:["Which institutional mechanisms and incentives are agents reinforcing, and which dynamics are changing qualitatively?",
+     "When do systemic case studies generalize?",
+     "What methods yield leading indicators of systemic change?"],
+ rel:["2f","2j","2e","3i"]},
+
+/* ===== PART 3 ===== */
+{id:"3a",part:"who",title:"Who evaluates",q:"Who evaluates?",
+ thesis:"The evaluator ecosystem spans academia, frontier labs, evaluation vendors and PBCs, nonprofits, philanthropies, and the public sector, and contributing does not require running evaluations yourself or holding a PhD.",
+ tk:["Roles beyond direct evaluation: aggregating and synthesizing (indices, leaderboards), building shared infrastructure, convening and standard-setting, funding, and policy translation.",
+     "Embedded evaluators — external parties placed inside frontier labs — are a new and contested arrangement.",
+     "Different evaluators bring different constructs and methods; the field benefits from pluralism when choices are visible and defensible."],
+ ex:"Consequential decisions that used to live upstream in benchmark construction are now distributed across scaffolds, prompts, tools, environments, budgets, intervention points, and statistics — so who makes them matters more than before. Divergent findings are useful when they expose which design choices drove them.",
+ cl:["Explore evaluation work across academia, labs, nonprofits, and the public sector; not all paths run through a PhD.",
+     "Identify which ecosystem function fits you: evaluating, interpreting, standardizing, communicating with policymakers, or advising funders."],
+ rel:["3b","3i","3g","3e"]},
+{id:"3b",part:"who",title:"Independence",q:"What does independence require?",
+ thesis:"Independence is multidimensional — access, methodological freedom, disclosure rights, funding, and legal safe harbor — so being a third party does not make an evaluator independent, and each dimension has to be examined separately.",
+ tk:["For agents, access means more than an API: raw reasoning traces, realistic tool setups, and rate limits high enough for repeated runs; most evaluators only get post-deployment access.",
+     "Freedom to design the evaluation distinguishes evaluation from replication; freedom to publish findings completes it.",
+     "Safe-harbor protections remain incomplete, so evaluators must navigate retaliation and terms-of-service risk themselves."],
+ ex:"The EU General-Purpose AI Code of Practice encourages access and compute for qualified external evaluators. Embedded-evaluator arrangements solve access while reopening questions of funding, disclosure, and method. The AI Evaluator Forum's AEF-1 standard sets minimum operating conditions.",
+ cl:["Scrutinize funding, access limits, and conflicts of interest using frameworks such as AEF-1.",
+     "Clarify institutional policies before joining an organization, since safe harbor is not guaranteed."],
+ rel:["3a","3c","3d","3e","2d"]},
+{id:"3c",part:"who",title:"Labs shaping evaluations",q:"Does lab direction drive evaluations?",
+ thesis:"Frontier developers shape evaluation through three channels — gating access, supplying funding and credits, and setting the agenda via their risk frameworks — which makes independence of method a different thing from independence of agenda.",
+ tk:["Access: tiered release (public vs trusted parties) decides what is evaluable at all.",
+     "Material conditions: RFPs, grants, acquisitions, hiring, and in-kind credits decide which evaluations are feasible for outsiders.",
+     "Agenda: the Frontier Safety Framework, Responsible Scaling Policy, and Preparedness Framework define which risks are legible, and lab announcements steer where evaluators look."],
+ ex:"Following lab signals can be healthy accountability or an offloading of lab responsibilities onto outsiders. Evaluators with an independent agenda can pursue questions labs choose not to. Embedded evaluation will couple these dynamics more tightly.",
+ cl:["When adopting lab risk categories or thresholds, cite them and name the risks they leave out.",
+     "Disclose conditions attached to access or credits alongside results.",
+     "Check whether funding priorities align with your own research priorities."],
+ rel:["3b","3d","3e","2f","2h"]},
+{id:"3d",part:"who",title:"Evaluations shaping labs",q:"Do evaluations drive lab direction?",
+ thesis:"Whether evaluations change lab behavior is an empirical question; developer adoption is a fair success signal for capability evaluations but not for accountability evaluations, where unfavorable results may simply go unreported.",
+ tk:["A new benchmark can be treated as a shock: does progress accelerate on the newly measured capability relative to unmeasured neighbors?",
+     "Labs may have little incentive to invent metrics and strong incentive to respond to already-popular ones.",
+     "CAISSI and UK AISI pre-deployment collaborations produced self-reported patches; independent re-evaluation would be stronger evidence."],
+ ex:"Better accountability signals include regulatory uptake, publication regardless of outcome, and documented change on re-evaluation. 'Silent exit' options trade participation for transparency. Third-party compliance reviews are one proposed bridge between framework and practice.",
+ cl:["Distinguish the type of evaluation you run and judge developer participation accordingly.",
+     "Treat adoption as success only for capability evaluations.",
+     "Plan how a new metric gains visibility (e.g. leaderboards).",
+     "Track lab responses: patches, statements, policy changes.",
+     "Do not read missing results as good news."],
+ rel:["3c","3b","3g","3h"]},
+{id:"3e",part:"who",title:"Funding",q:"How does funding shape independent evaluation?",
+ thesis:"Hundreds of millions have flowed into evaluation over three years, mostly as private money into startups rather than philanthropy for independent work, and the mix of philanthropic, lab, public, and earned income shapes what gets evaluated.",
+ tk:["Early field-building came from EA-aligned philanthropies (Open Philanthropy, now Coefficient Giving; Survival and Flourishing Fund), which stood up Apollo and METR and set early risk priorities; Schmidt Sciences and UK AISI grants followed.",
+     "Labs fund directly via RFPs and collectively through the Frontier Model Forum's AI Safety Fund.",
+     "Apollo became a PBC in January 2026 to scale via earned income; OpenAI Foundation and Anthropic founders' pledges may create new centers of influence."],
+ ex:"In-kind support (compute, credits) is as consequential as cash and should be disclosed alike. Who funds and maintains shared infrastructure matters for everyone who depends on it.",
+ cl:["Distinguish financial from in-kind support and how an organization discloses each.",
+     "Trace historical and present funding and how it orients an organization.",
+     "Note who funds and maintains the infrastructure you rely on."],
+ rel:["3b","3c","3f","3a"]},
+{id:"3f",part:"who",title:"Rising costs",q:"How do rising costs affect evaluations?",
+ thesis:"A full run can now cost tens of thousands of dollars per model, costs fall asymmetrically on external evaluators paying API prices, and they directly constrain the repeated runs and human participants that rigor demands.",
+ tk:["MirrorCode on Fable 5 is roughly $50k in API credits per full run; ExploitBench reports tens of thousands per model.",
+     "Drivers: longer time-horizon tasks, frontier probing, reliability measurement (repeated sampling multiplies cost), expert human graders, uplift-study recruitment.",
+     "Autograders save money but add calibration costs; shared infrastructure spreads maintenance without changing the trajectory."],
+ ex:"Rising costs narrow the field to those who can pay, which threatens independent high-quality evaluation. Budgeting must cover engineering and maintenance on top of API spend, and run costs can be trimmed through item-level task reduction.",
+ cl:["Estimate full panel cost (per-run API × runs × tasks) before committing.",
+     "Factor cost in jointly with quality, reliability, and accuracy.",
+     "Budget for engineering and maintenance; cut costs via item analysis and shared infrastructure."],
+ rel:["1b","1c","1d","1j","3e"]},
+{id:"3g",part:"who",title:"Venues",q:"Where are the venues for evaluations?",
+ thesis:"Much of the most-cited evaluation work appears in blog posts, research notes, repositories, and system cards rather than peer-reviewed venues, so credibility must be judged by methodological scrutiny and emerging reporting standards regardless of where work appears.",
+ tk:["Ask of any venue: is a construct defined, how is attribution handled, how is significance justified?",
+     "Reporting standards are forming: safety cases, evaluation cards, FLARE-AI for flaw reporting, Weval for qualitative results.",
+     "Benchmark aggregators are useful snapshots but a starting point, not an endpoint; NeurIPS now has an evaluations track."],
+ ex:"Peer review has not caught up with the field's pace. Understanding other evaluation ecosystems and geographic differences in norms is part of reading the landscape well.",
+ cl:["Look beyond academia and scrutinize rigor wherever work appears.",
+     "Learn other ecosystems and geographic differences in norms.",
+     "Adopt voluntary reporting formats and share infrastructure to reinforce field standards."],
+ rel:["3a","3d","1j","3i"]},
+{id:"3h",part:"who",title:"Public sector",q:"How is the public sector responding?",
+ thesis:"Governments are both operators and regulators of AI, which makes evaluation a lifecycle responsibility rather than a procurement checkbox and creates roles from direct evaluation to standard-setting to certified independent verification.",
+ tk:["Deployments in cybersecurity, emergency management, benefits adjudication, statutory research (STARA, LaborBench) remain weakly evaluated despite being unavoidable for constituents.",
+     "Regulation: the EU AI Act and Code of Practice; California's SB 53 transparency law; bodies such as US CAISSI and UK AISI mix evaluation, standards, communication, and (UK) grantmaking.",
+     "Independent Verification Organizations (US House discussion draft, June 2026): government sets outcomes, certified evaluators operationalize and verify them."],
+ ex:"Pre-deployment approval says little about field impact; capacity for sustained monitoring is the gap. IVOs hold real power in how they operationalize targets even when the targets come from a democratic process.",
+ cl:["Evaluate public deployments against status-quo baselines (marginal risk).",
+     "Engage with public evaluation bodies to shape agendas.",
+     "Plan public-sector evaluation as a lifecycle through post-deployment monitoring."],
+ rel:["2h","2k","3b","3d","3i"]},
+{id:"3i",part:"who",title:"Disciplinary entry points",q:"Where are the entry points for different disciplines?",
+ thesis:"The scope of evaluation is broadening into social-science territory while participation stays concentrated in computer science; measurement science, HCI, economics, sociology, law, and political science each have direct entry points if engineering barriers are lowered.",
+ tk:["Measurement science: validity arguments, reliability, item analysis, equating. HCI: simulated users, interaction harms, alternatives to the automation-augmentation framing.",
+     "Economics: from task performance to occupations, causal inference from messy diffusion data. Sociology/anthropology: how deployments reshape work, harms as people experience them.",
+     "Law: safe harbor, liability across model/scaffold/tool providers, due process. Political science: democratic accountability of public evaluation, IVO design, agenda-setting power."],
+ ex:"Barriers are the cost and engineering demands of agent work, the gravitational pull of AI/ML venues, and concentrated agendas. Societal AI research has become less interdisciplinary even as evaluation needs more disciplines, and translation must run both ways.",
+ cl:["Collaborate with disciplines suited to the question, rather than only borrowing their methods.",
+     "Draw on existing literatures, especially on validity and rigor.",
+     "Pair new disciplinary perspectives with sufficient engineering capacity."],
+ rel:["3a","1a","1d","2j","2k","3h"]}
+];
+
+const LENS = {
+  enter:{start:["1a","3a","3i"],also:["3g","2a","2b","2c","2d","2e","2f","2g","2h","2i","2j","2k"]},
+  impl:{start:["1c","1d","1e","1h","1i","1j","2i"],also:["1f","2g","3f"]},
+  weigh:{start:["1a","1b","1d","1f","1m"],also:["2g","2i","3b","3c"]},
+  deploy:{start:["2c","2d","2e"],also:["1l","2a","2b","2j"]},
+  policy:{start:["2h","2k","3b","3h"],also:["1k","2f","3c","3d"]},
+  fund:{start:["3b","3e","3f"],also:["1j","3c","3d","3g"]}
+};
+const LENSNAME = {enter:"Entering agent-evaluation research",impl:"Implementing an evaluation",weigh:"Weighing evaluation claims",deploy:"Evaluating agents for a deployment",policy:"Policy and oversight",fund:"Funding evaluations"};
+
+/* Figure 3 reconstruction */
+const CONCERNS = ["Construct validity","Quality and saturation","Statistical rigor","Causal attribution","Data contamination","Ecological validity"];
+const METHODS = [
+  {id:"1b",label:"Item-level analysis",kind:"Design practice"},
+  {id:"1d",label:"Repeated runs",kind:"Design practice"},
+  {id:"1e",label:"Factorial designs",kind:"Design practice"},
+  {id:"1f",label:"Held-out test sets",kind:"Design practice"},
+  {id:"1g",label:"Dynamic benchmarks",kind:"Tool / format"},
+  {id:"1h",label:"LLM judges and monitors",kind:"Tool / format"},
+  {id:"1i",label:"Log analysis",kind:"Tool / format"},
+  {id:"1j",label:"Standardized infrastructure",kind:"Tool / format"},
+  {id:"1l",label:"Open-world evaluations",kind:"Tool / format"}
+];
+const EDGES = [ /* [method, concernIndex, 'a' addresses | 'r' risk] */
+  ["1b",1,"a"],["1b",0,"a"],
+  ["1d",2,"a"],
+  ["1e",3,"a"],
+  ["1f",4,"a"],
+  ["1g",4,"a"],["1g",1,"a"],["1g",5,"a"],["1g",3,"r"],["1g",0,"r"],
+  ["1h",1,"a"],["1h",2,"r"],["1h",0,"r"],
+  ["1i",0,"a"],["1i",4,"a"],["1i",1,"a"],
+  ["1j",3,"a"],["1j",2,"a"],["1j",4,"r"],["1j",0,"r"],
+  ["1l",5,"a"],["1l",2,"r"]
+];
+
+/* ---------- STATE ---------- */
+const byId = Object.fromEntries(T.map(t=>[t.id,t]));
+let read = new Set();
+try{ read = new Set(JSON.parse(localStorage.getItem("aet-read")||"[]")); }catch(e){}
+function saveRead(){ try{ localStorage.setItem("aet-read", JSON.stringify([...read])); }catch(e){} }
+let lens = "";
+let selected = null;
+let walkIdx = 0;
+let mode = "map";
+
+function seq(){
+  if(!lens) return T.map(t=>t.id);
+  const L = LENS[lens]; return [...L.start, ...L.also];
+}
+function lensStatus(id){
+  if(!lens) return "";
+  const L = LENS[lens];
+  if(L.start.includes(id)) return "start";
+  if(L.also.includes(id)) return "also";
+  return "out";
+}
+
+/* ---------- CARD RENDERING ---------- */
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+function renderCard(id, el, opts={}){
+  const t = byId[id]; const P = PARTS[t.part];
+  const ls = lensStatus(id);
+  const lensNote = lens ? `<div class="lensnote">Lens “${LENSNAME[lens]}”: ${ls==="start"?"the paper suggests starting here.":ls==="also"?"listed as also relevant.":"not on this lens's list."}</div>` : "";
+  el.innerHTML = `
+    <div class="kicker"><span class="pill ${t.part}">${t.id}</span><span>${P.label} · ${P.sub}</span>${read.has(id)?'<span style="margin-left:auto;color:var(--ok)">✓ read</span>':''}</div>
+    <h2>${esc(t.title)}</h2>
+    <p class="q">${esc(t.q)}</p>
+    <p class="thesis">${esc(t.thesis)}</p>
+    <ol class="tk">${t.tk.map(x=>`<li>${esc(x)}</li>`).join("")}</ol>
+    <div class="widget-slot"></div>
+    <details ${opts.open?"open":""}><summary>Read more</summary>
+      <div class="more">
+        <h4>In the paper</h4><p>${esc(t.ex)}</p>
+        <h4>${P.closing}</h4><ul>${t.cl.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
+      </div>
+    </details>
+    <div class="rel">Related: ${t.rel.map(r=>`<button class="chip" data-go="${r}">${r} ${esc(byId[r].title)}</button>`).join("")}</div>
+    ${lensNote}`;
+  el.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.go)));
+  if(t.widget) WIDGETS[t.widget](el.querySelector(".widget-slot"));
+  if(!read.has(id)){ read.add(id); saveRead(); updateProgress(); refreshMarks(); }
+}
+function renderIntro(el){
+  el.innerHTML = `<div class="intro">
+    <div class="kicker"><span>Start here</span></div>
+    <h2>Why agent evaluation is a new field</h2>
+    <p>Model evaluation graded one response against a reference answer. Agent evaluation covers a whole system — model, scaffold, tools — acting in an environment over many steps, sometimes with a human intervening, graded by tests, rubrics, or LLM judges on the trajectory as well as the result. The paper surveys 33 trends in three parts:</p>
+    <div class="parts">
+      <div style="border-left:3px solid var(--how)"><b>How · 13 trends · each ends with best practices</b>Validity, rigor, attribution, contamination, and the emerging toolkit: dynamic benchmarks, LLM judges, log analysis, shared infrastructure, red-teaming, open-world evals, human baselines.</div>
+      <div style="border-left:3px solid var(--what)"><b>What · 11 trends · each ends with research directions</b>From capabilities to human interaction (simulated, lab, field, observational) to systemic impact; economics, behavior under evaluation, dangerous capabilities, security, interaction harms.</div>
+      <div style="border-left:3px solid var(--who)"><b>Who · 9 trends · each ends with practical considerations</b>Who evaluates, what independence requires, how labs and evaluators shape each other, funding, costs, venues, the public sector, and entry points for other disciplines.</div>
+    </div>
+    <p>Click any node on the map, or switch to <b>Walkthrough</b> to go trend by trend. Pick a <b>Lens</b> to see the paper's own suggested reading path for your goal (its Table 2). <b>Concept links</b> shows how the Part 1 methods address, and sometimes endanger, the paper's six recurring concerns.</p>
+  </div>`;
+}
+function go(id){
+  if(mode==="walk"){ const s=seq(); let i=s.indexOf(id); if(i<0){ lens=""; document.getElementById("lens").value=""; i=seq().indexOf(id); applyLens(); } walkIdx=i; renderWalk(); }
+  else if(mode==="concept"){ selected=id; renderCard(id, document.getElementById("conceptcard")); highlightConcept(id); }
+  else { selected=id; renderCard(id, document.getElementById("mapcard")); refreshMarks(); }
+}
+
+/* ---------- RADIAL MAP ---------- */
+const svg = document.getElementById("map");
+const NS = "http://www.w3.org/2000/svg";
+function el(n,a){ const e=document.createElementNS(NS,n); for(const k in a) e.setAttribute(k,a[k]); return e; }
+const R1=135, R2=295;
+const nodePos = {};
+(function buildMap(){
+  const parts=["how","what","who"];
+  const counts = parts.map(p=>T.filter(t=>t.part==p).length);
+  const total=counts.reduce((a,b)=>a+b,0), gap=12, per=(360-gap*3)/total;
+  let a = -90 - (counts[0]*per)/2 - 0; // How centered at top
+  const linksG=el("g",{}), nodesG=el("g",{});
+  svg.append(linksG,nodesG);
+  parts.forEach((p,pi)=>{
+    const n=counts[pi]; const start=a, end=a+n*per, mid=(start+end)/2;
+    const pm=mid*Math.PI/180, px=Math.cos(pm)*R1, py=Math.sin(pm)*R1;
+    linksG.append(el("line",{class:"link",x1:0,y1:0,x2:px,y2:py}));
+    const pg=el("g",{class:"node part","data-part":p});
+    pg.append(el("circle",{cx:px,cy:py,r:26,fill:`var(--${p})`}));
+    const tt=el("text",{x:px,y:py}); tt.textContent=p==="how"?"How":p==="what"?"What":"Who"; pg.append(tt);
+    nodesG.append(pg);
+    T.filter(t=>t.part==p).forEach((t,i)=>{
+      const ang=start+per*(i+.5), rad=ang*Math.PI/180;
+      const x=Math.cos(rad)*R2, y=Math.sin(rad)*R2;
+      nodePos[t.id]={x,y,ang};
+      const cx=Math.cos(rad)*(R1+(R2-R1)*.55), cy=Math.sin(rad)*(R1+(R2-R1)*.55);
+      linksG.append(el("path",{class:"link","data-id":t.id,d:`M${px},${py} Q${cx},${cy} ${x},${y}`}));
+      const g=el("g",{class:"node leaf","data-id":t.id,tabindex:0,role:"button","aria-label":t.id+" "+t.title});
+      g.append(el("circle",{cx:x,cy:y,r:12,fill:`var(--${p})`}));
+      const c=el("text",{class:"code",x:x,y:y}); c.textContent=t.id; g.append(c);
+      const left=Math.cos(rad)<0;
+      const lx=Math.cos(rad)*(R2+18), ly=Math.sin(rad)*(R2+18);
+      const lab=el("text",{x:lx,y:ly,"text-anchor":left?"end":"start","dominant-baseline":"central",transform:`rotate(${left?ang+180:ang} ${lx} ${ly})`});
+      lab.textContent=t.title; g.append(lab);
+      g.addEventListener("click",()=>go(t.id));
+      g.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();go(t.id);} });
+      nodesG.append(g);
+    });
+    a=end+gap;
+  });
+  const cg=el("g",{class:"center"});
+  cg.append(el("circle",{cx:0,cy:0,r:40,fill:"var(--soft)",stroke:"var(--line)"}));
+  const t1=el("text",{x:0,y:-4}); t1.textContent="Agent"; const t2=el("text",{x:0,y:12}); t2.textContent="evaluation";
+  cg.append(t1,t2); nodesG.append(cg);
+})();
+function refreshMarks(){
+  svg.querySelectorAll(".node.leaf").forEach(g=>{
+    const id=g.dataset.id;
+    g.classList.toggle("read",read.has(id));
+    g.classList.toggle("sel",selected===id);
+    const ls=lensStatus(id);
+    g.classList.toggle("dim",ls==="out");
+    g.classList.toggle("also",ls==="also");
+  });
+  svg.querySelectorAll(".link[data-id]").forEach(l=>l.classList.toggle("dim",lensStatus(l.dataset.id)==="out"));
+  document.querySelectorAll("#cmap .cnode[data-id]").forEach(n=>n.classList.toggle("read",read.has(n.dataset.id)));
+}
+
+/* ---------- WALKTHROUGH ---------- */
+function renderWalk(){
+  const s=seq(); if(walkIdx>=s.length) walkIdx=0;
+  const id=s[walkIdx];
+  renderCard(id, document.getElementById("walkcard"), {open:false});
+  document.getElementById("pos").textContent = `${walkIdx+1} of ${s.length}` + (lens?` · ${LENSNAME[lens]}`:"");
+  document.getElementById("prev").disabled = walkIdx===0;
+  document.getElementById("next").disabled = walkIdx===s.length-1;
+  const d=document.getElementById("dots"); d.innerHTML="";
+  s.forEach((x,i)=>{ const b=document.createElement("button"); b.textContent=x; b.className=byId[x].part+(read.has(x)?" read":"")+(i===walkIdx?" cur":""); b.title=byId[x].title; b.addEventListener("click",()=>{walkIdx=i;renderWalk();}); d.append(b); });
+  if(window.scrollY>0) window.scrollTo({top:0,behavior:"smooth"});
+}
+document.getElementById("prev").addEventListener("click",()=>{ if(walkIdx>0){walkIdx--;renderWalk();} });
+document.getElementById("next").addEventListener("click",()=>{ if(walkIdx<seq().length-1){walkIdx++;renderWalk();} });
+document.addEventListener("keydown",e=>{
+  if(mode!=="walk"||e.target.tagName==="SELECT") return;
+  if(e.key==="ArrowRight") document.getElementById("next").click();
+  if(e.key==="ArrowLeft") document.getElementById("prev").click();
+});
+
+/* ---------- CONCEPT VIEW ---------- */
+const cmap=document.getElementById("cmap");
+const cpos={};
+(function buildConcept(){
+  const eg=el("g",{}), ng=el("g",{}); cmap.append(eg,ng);
+  const mx=20, mw=215, cx=485, cw=215, h=30;
+  const mGap=(440-20)/METHODS.length, cGap=(440-20)/CONCERNS.length;
+  METHODS.forEach((m,i)=>{ const y=10+mGap*i+(mGap-h)/2; cpos[m.id]={x:mx+mw,y:y+h/2};
+    const g=el("g",{class:"cnode",'data-id':m.id,tabindex:0,role:"button"});
+    g.append(el("rect",{x:mx,y:y,width:mw,height:h}));
+    const t=el("text",{x:mx+10,y:y+h/2}); t.textContent=`${m.id}  ${m.label}`; g.append(t);
+    g.addEventListener("mouseenter",()=>highlightConcept(m.id,true));
+    g.addEventListener("mouseleave",()=>highlightConcept(selected));
+    g.addEventListener("click",()=>go(m.id));
+    g.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();go(m.id);} });
+    ng.append(g);
+  });
+  CONCERNS.forEach((c,i)=>{ const y=10+cGap*i+(cGap-h)/2; cpos["c"+i]={x:cx,y:y+h/2};
+    const g=el("g",{class:"cnode"}); g.append(el("rect",{x:cx,y:y,width:cw,height:h}));
+    const t=el("text",{x:cx+10,y:y+h/2}); t.textContent=c; g.append(t); ng.append(g);
+  });
+  EDGES.forEach(([m,c,k])=>{ const a=cpos[m], b=cpos["c"+c]; const dx=(b.x-a.x)/2;
+    eg.append(el("path",{class:"edge "+k,'data-m':m,d:`M${a.x},${a.y} C${a.x+dx},${a.y} ${b.x-dx},${b.y} ${b.x},${b.y}`}));
+  });
+  // headers
+  const h1=el("text",{x:20,y:6,"font-size":"10","fill":"var(--muted)"}); h1.textContent="METHODS (Part 1)";
+  const h2=el("text",{x:485,y:6,"font-size":"10","fill":"var(--muted)"}); h2.textContent="RECURRING CONCERNS";
+  ng.append(h1,h2);
+})();
+function highlightConcept(id, hover){
+  const anyM = id && METHODS.some(m=>m.id===id);
+  cmap.querySelectorAll(".edge").forEach(e=>e.classList.toggle("dim", anyM && e.dataset.m!==id));
+  cmap.querySelectorAll(".cnode[data-id]").forEach(n=>n.classList.toggle("hl", n.dataset.id===id));
+}
+
+/* ---------- WIDGETS ---------- */
+const WIDGETS = {
+  passk(slot){
+    const runs=[[1,1,1,1,1],[1,1,1,0,0],[1,0,0,0,0],[0,0,0,0,0]];
+    slot.innerHTML=`<div class="widget"><h5>Try it: pass@1 vs pass@5 vs pass∧5</h5><div class="grid" id="pk"></div><div class="stats" id="pks"></div><p class="hint">Click a run to flip success/failure. Same data, three very different numbers: pass@k rewards a single lucky run; pass∧k demands every run succeed.</p></div>`;
+    const grid=slot.querySelector("#pk"), stats=slot.querySelector("#pks");
+    function draw(){
+      grid.innerHTML="";
+      runs.forEach((r,ti)=>{
+        const l=document.createElement("div"); l.textContent="Task "+"ABCD"[ti]; grid.append(l);
+        r.forEach((v,ri)=>{ const b=document.createElement("button"); b.className="run"+(v?" ok":""); b.title="toggle"; b.addEventListener("click",()=>{runs[ti][ri]=v?0:1;draw();}); grid.append(b); });
+        const s=document.createElement("div"); s.className="rate"; s.textContent=r.reduce((a,b)=>a+b,0)+"/5"; grid.append(s);
+      });
+      const n=runs.length;
+      const p1=runs.reduce((a,r)=>a+r.reduce((x,y)=>x+y,0)/5,0)/n;
+      const pk=runs.filter(r=>r.some(v=>v)).length/n;
+      const pa=runs.filter(r=>r.every(v=>v)).length/n;
+      stats.innerHTML=[["pass@1",p1,"expected single-run success"],["pass@5",pk,"at least one of five succeeds"],["pass∧5",pa,"all five succeed"]].map(([k,v,d])=>`<div class="stat"><b>${Math.round(v*100)}%</b>${k}<br><span>${d}</span></div>`).join("");
+    }
+    draw();
+  },
+  pareto(slot){
+    slot.innerHTML=`<div class="widget pareto"><h5>Try it: accuracy vs cost Pareto frontier</h5><svg viewBox="0 0 420 240" id="pv"></svg><p class="hint">Drag any agent. Filled points sit on the frontier (no other agent is both cheaper and more accurate); hollow points are dominated. Note how far-right points buy little accuracy for a lot of cost.</p></div>`;
+    const s=slot.querySelector("#pv");
+    const pts=[{n:"A",c:.08,a:.42},{n:"B",c:.2,a:.6},{n:"C",c:.33,a:.55},{n:"D",c:.45,a:.74},{n:"E",c:.62,a:.7},{n:"F",c:.8,a:.8},{n:"G",c:.95,a:.82}];
+    const L=40,R=405,Tp=15,B=205;
+    const X=c=>L+c*(R-L), Y=a=>B-a*(B-Tp);
+    let drag=null;
+    function draw(){
+      s.innerHTML=`<line x1="${L}" y1="${B}" x2="${R}" y2="${B}" stroke="var(--line)"/><line x1="${L}" y1="${Tp}" x2="${L}" y2="${B}" stroke="var(--line)"/>
+        <text x="${(L+R)/2}" y="${B+22}" text-anchor="middle" font-size="11" fill="var(--muted)">Cost →</text>
+        <text x="12" y="${(Tp+B)/2}" text-anchor="middle" font-size="11" fill="var(--muted)" transform="rotate(-90 12 ${(Tp+B)/2})">Accuracy →</text>`;
+      const front=pts.filter(p=>!pts.some(q=>q!==p&&q.c<=p.c&&q.a>=p.a&&(q.c<p.c||q.a>p.a))).sort((a,b)=>a.c-b.c);
+      const path=el("path",{d:front.map((p,i)=>(i?"L":"M")+X(p.c)+","+Y(p.a)).join(" "),fill:"none",stroke:"var(--accent)","stroke-width":2});
+      s.append(path);
+      pts.forEach(p=>{ const on=front.includes(p);
+        const g=el("g",{style:"cursor:grab"});
+        g.append(el("circle",{cx:X(p.c),cy:Y(p.a),r:9,fill:on?"var(--accent)":"var(--panel)",stroke:on?"var(--accent)":"var(--muted)","stroke-width":2}));
+        const t=el("text",{x:X(p.c),y:Y(p.a)-14,"text-anchor":"middle","font-size":"11",fill:"var(--ink)"}); t.textContent=p.n; g.append(t);
+        g.addEventListener("pointerdown",e=>{drag=p;s.setPointerCapture(e.pointerId);});
+        s.append(g);
+      });
+    }
+    function pt(e){ const r=s.getBoundingClientRect(); const sx=420/r.width, sy=240/r.height; return {x:(e.clientX-r.left)*sx,y:(e.clientY-r.top)*sy}; }
+    s.addEventListener("pointermove",e=>{ if(!drag) return; const m=pt(e); drag.c=Math.min(1,Math.max(0,(m.x-L)/(R-L))); drag.a=Math.min(1,Math.max(0,(B-m.y)/(B-Tp))); draw(); });
+    s.addEventListener("pointerup",()=>drag=null); s.addEventListener("pointercancel",()=>drag=null);
+    draw();
+  },
+  log(slot){
+    const lines=[["think","reproduce the results table from the repository",0],["tool","run: python train.py",0],["output","error: dataset not found",0],["tool","search: expected outputs for this benchmark",1],["tool","open: huggingface.co/datasets/.../answers",1],["think","the expected values are listed here; report them",1],["submit","results.json",0]];
+    slot.innerHTML=`<div class="widget"><h5>Step through the paper's fictional log (Figure 11)</h5><div class="log" id="lg"></div><div class="logout"><span>Outcome:</span><span class="badge" id="lb">scored as success</span><button class="wbtn" id="ls">Next line</button><button class="wbtn" id="lr">Reset</button></div><p class="hint" id="lh">An outcome-only grader sees a passing submission. Step through to see what the log shows.</p></div>`;
+    const lg=slot.querySelector("#lg"), lb=slot.querySelector("#lb"), lh=slot.querySelector("#lh");
+    let k=0;
+    lines.forEach((l,i)=>{ const d=document.createElement("div"); d.innerHTML=`<span class="n">${i+1}</span><span class="k">${l[0]}</span><span>${esc(l[1])}</span>`; if(l[2]) d.classList.add("flag"); lg.append(d); });
+    function upd(){ [...lg.children].forEach((d,i)=>d.classList.toggle("shown",i<k));
+      if(k>=5){ lb.textContent="should not count"; lb.classList.add("bad"); lh.textContent="Search-time contamination: the agent retrieved the benchmark's answers instead of reproducing them. Only the trajectory reveals it; the final state looks like success."; }
+      else if(k>=4){ lh.textContent="Line 4 is the tell: after the environment failed, the agent went looking for expected outputs rather than fixing the setup."; }
+      else { lb.textContent="scored as success"; lb.classList.remove("bad"); if(k===0) lh.textContent="An outcome-only grader sees a passing submission. Step through to see what the log shows."; }
+    }
+    slot.querySelector("#ls").addEventListener("click",()=>{ if(k<lines.length) k++; upd(); });
+    slot.querySelector("#lr").addEventListener("click",()=>{ k=0; upd(); });
+    upd();
+  },
+  layers(slot){
+    const L=[
+      {t:"1 · Capabilities",d:"what agents can do on economically relevant tasks",ex:"GDPval, APEX-Agents, Remote Labor Index",can:"Whether an agent can produce an acceptable deliverable for a defined task, how reliably, at what cost, versus an expert.",cant:"That anyone uses it this way, that the task represents the occupation, or that jobs or output change."},
+      {t:"2 · Usage",d:"how agents are actually used in work today",ex:"Anthropic Economic Index, Google's AI and Economy Atlas",can:"Diffusion and adoption: which workers, which tasks, which patterns (e.g. the rise of long-running agentic tasks).",cant:"Causal economic effects. Heavy use is not evidence of productivity gain, and labs hold the telemetry."},
+      {t:"3 · Impact",d:"effects of agent usage on work and institutions",ex:"Stanford AI Economic Indicators, causal studies",can:"Aggregate shifts: productivity growth, displacement, capital share, output quality, reorganization of work.",cant:"Attribution to AI without causal design; and it says nothing about which capability drove the shift."}
+    ];
+    slot.innerHTML=`<div class="widget"><h5>Three layers of economic evidence (Figure 15)</h5><div class="layers" id="ly"></div><div class="layerout" id="lo">Click a layer. The paper's warning: evidence at one layer does not by itself support claims at another.</div></div>`;
+    const ly=slot.querySelector("#ly"), lo=slot.querySelector("#lo");
+    L.forEach((l,i)=>{ const b=document.createElement("button"); b.innerHTML=`<b>${l.t}</b>${l.d}`; b.addEventListener("click",()=>{ [...ly.children].forEach(c=>c.classList.remove("on")); b.classList.add("on"); lo.innerHTML=`<div style="color:var(--muted);font-size:12px;margin-bottom:4px">Examples: ${esc(l.ex)}</div><div><span style="color:var(--ok);font-weight:600">Can support:</span> ${esc(l.can)}</div><div style="margin-top:4px"><b>Cannot support:</b> ${esc(l.cant)}</div>`; }); ly.append(b); });
+  }
+};
+
+/* ---------- CONTROLS ---------- */
+function updateProgress(){
+  document.getElementById("progtxt").textContent=`${read.size} / ${T.length} read`;
+  document.getElementById("progbar").style.width=(read.size/T.length*100)+"%";
+}
+document.getElementById("reset").addEventListener("click",()=>{ read.clear(); saveRead(); updateProgress(); refreshMarks(); if(mode==="walk") renderWalk(); });
+document.getElementById("lens").addEventListener("change",e=>{ lens=e.target.value; applyLens(); });
+function applyLens(){ refreshMarks(); if(mode==="walk"){ walkIdx=0; renderWalk(); } else if(mode==="map" && selected){ renderCard(selected, document.getElementById("mapcard")); } }
+document.querySelectorAll(".modes button").forEach(b=>b.addEventListener("click",()=>setMode(b.dataset.mode)));
+function setMode(m){
+  mode=m;
+  document.querySelectorAll(".modes button").forEach(b=>b.classList.toggle("on",b.dataset.mode===m));
+  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on",v.id==="view-"+m));
+  if(m==="walk") renderWalk();
+  if(m==="concept"){ const c=document.getElementById("conceptcard"); if(selected && METHODS.some(x=>x.id===selected)){ renderCard(selected,c); highlightConcept(selected);} else if(!c.innerHTML){ c.innerHTML=`<div class="intro"><div class="kicker"><span>Concept links</span></div><h2>Methods and the concerns they serve</h2><p>Part 1 keeps returning to six concerns: construct validity, benchmark quality and saturation, statistical rigor, causal attribution, data contamination, and ecological validity. Each method on the left is presented as a response to some of them — and several of the tools (dynamic benchmarks, LLM judges, shared infrastructure, open-world evaluation) also <em>introduce</em> a new risk for another concern.</p><p>Hover a method to isolate its edges. Click one to open its card here.</p></div>`; } }
+  if(m==="map" && !document.getElementById("mapcard").innerHTML) renderIntro(document.getElementById("mapcard"));
+  refreshMarks();
+}
+renderIntro(document.getElementById("mapcard"));
+updateProgress(); refreshMarks();
+</script>
+</body>
+</html>
