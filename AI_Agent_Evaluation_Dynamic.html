@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The New Science of AI Agent Evaluation</title>
+<style>
+:root{--cream:#f3f3ee;--ink:#1c2330;--blue:#3b63d8;--cyan:#22c5df;--amber:#e9a31a;--grey:#4b515c;--mono:"JetBrains Mono","SFMono-Regular",Menlo,Consolas,monospace;--sans:Inter,"Helvetica Neue",Arial,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#17191e;overflow:hidden;font-family:var(--sans)}
+.deck{height:100vh;overflow-y:auto;scroll-snap-type:y mandatory;scroll-behavior:smooth}
+.slide{height:100vh;scroll-snap-align:start;display:flex;align-items:center;justify-content:center}
+.stage{position:relative;width:min(100vw,calc(100vh * 16 / 9));aspect-ratio:16/9;background:var(--cream);overflow:hidden;container-type:inline-size}
+.stage>svg{position:absolute;inset:0;width:100%;height:100%}
+.ov{position:absolute;inset:0;pointer-events:none}
+.ov .c{pointer-events:auto;position:absolute;font:1.05cqw var(--mono);color:var(--ink)}
+.ov input[type=range]{width:100%;accent-color:#3b63d8}
+text{font-family:var(--sans);fill:var(--ink)}
+.m{font-family:var(--mono)}
+.b{font-weight:700}
+.a,.fade{opacity:0}
+.slide.on .a{animation:rise .9s cubic-bezier(.2,.7,.2,1) var(--d,0s) forwards}
+.slide.on .fade{animation:fade .8s ease var(--d,0s) forwards}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes fade{to{opacity:1}}
+.dr{stroke-dasharray:1;stroke-dashoffset:1}
+.slide.on .dr{animation:dr 1.3s ease var(--d,0s) forwards}
+@keyframes dr{to{stroke-dashoffset:0}}
+.grow{transform-box:fill-box;transform-origin:left center;transform:scaleX(0)}
+.slide.on .grow{animation:grow 1s ease var(--d,0s) forwards}
+@keyframes grow{to{transform:scaleX(1)}}
+.pop{transform-box:fill-box;transform-origin:center;opacity:0;transform:scale(.3)}
+.slide.on .pop{animation:pop .5s cubic-bezier(.3,1.5,.5,1) var(--d,0s) forwards}
+@keyframes pop{to{opacity:1;transform:scale(1)}}
+.mv{stroke-dasharray:16 14;animation:mv 1s linear infinite}
+.mvA{stroke-dasharray:24 14;animation:mv 1.4s linear infinite}
+@keyframes mv{to{stroke-dashoffset:-30}}
+.glow{animation:glow 3s ease-in-out infinite var(--d,0s)}
+@keyframes glow{0%,100%{opacity:.35}50%{opacity:1}}
+.hl{animation:hl 4s ease-in-out infinite var(--d,0s)}
+@keyframes hl{0%,100%{fill:#f6f6f2}10%,25%{fill:#d6e0fb}40%{fill:#f6f6f2}}
+.rip{transform-box:view-box;transform-origin:1420px 384px;animation:rip 6s ease-in-out infinite var(--d,0s)}
+@keyframes rip{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+.spinr{transform-box:fill-box;transform-origin:center;animation:spinr 22s linear infinite}
+@keyframes spinr{to{transform:rotate(360deg)}}
+.rock{transform-box:view-box;transform-origin:1160px 482px;animation:rock 4s ease-in-out infinite alternate}
+@keyframes rock{from{transform:rotate(-5deg)}to{transform:rotate(5deg)}}
+.rh{fill:transparent}
+.rh:hover{fill:rgba(59,99,216,.08)}
+.hot{animation:hot 1s ease-in-out infinite}
+@keyframes hot{0%,100%{opacity:1}50%{opacity:.45}}
+.node{transition:fill .2s}
+.node:hover{fill:#1f3fb0;cursor:pointer}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;animation-iteration-count:1!important}}
+nav#dots{position:fixed;right:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:9px;z-index:9}
+nav#dots span{width:9px;height:9px;border-radius:50%;background:#55596a;cursor:pointer;transition:background .2s,transform .2s}
+nav#dots span.act{background:var(--cyan);transform:scale(1.3)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="ahB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="20" markerHeight="20" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0L10,5L0,10z" fill="#3b63d8"/></marker>
+    <marker id="ahO" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="20" markerHeight="20" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0L10,5L0,10z" fill="#e9a31a"/></marker>
+    <marker id="ahC" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="20" markerHeight="20" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0L10,5L0,10z" fill="#22c5df"/></marker>
+    <marker id="ahK" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="20" markerHeight="20" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0L10,5L0,10z" fill="#3d4450"/></marker>
+    <marker id="ahG" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="18" markerHeight="18" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0L10,5L0,10z" fill="#6b7280"/></marker>
+  </defs>
+</svg>
+
+<div class="deck" id="deck">
+
+<!-- ============ SLIDE 1: TITLE ============ -->
+<section class="slide" id="s1"><div class="stage"><svg viewBox="0 0 1376 768">
+  <g transform="scale(1.126 1.158)" fill="none" stroke="#c7c9c2" stroke-width="2" stroke-linejoin="round">
+    <path class="dr" pathLength="1" style="--d:.1s" d="M530 118 H596 L632 186 H686"/>
+    <path class="dr" pathLength="1" style="--d:.2s" d="M596 118 L686 78 H780 L822 118 H872 L935 178"/>
+    <path class="dr" pathLength="1" style="--d:.3s" d="M686 78 L780 116 L822 158 L826 158"/>
+    <path class="dr" pathLength="1" style="--d:.4s" d="M780 116 L823 70"/>
+    <path class="dr" pathLength="1" style="--d:.5s" d="M872 116 H1045 H1108 H1222"/>
+    <path class="dr" pathLength="1" style="--d:.5s" d="M960 78 H1045 V10"/>
+    <path class="dr" pathLength="1" style="--d:.6s" d="M1045 116 L1108 152 H1222"/>
+    <path class="dr" pathLength="1" style="--d:.6s" d="M960 188 L1045 224 H1108 L1222 188"/>
+    <path class="dr" pathLength="1" style="--d:.7s" d="M1045 224 V330 L1128 330"/>
+    <path class="dr" pathLength="1" style="--d:.7s" d="M1045 330 L1128 372 H1222"/>
+    <path class="dr" pathLength="1" style="--d:.8s" d="M1045 330 V663"/>
+    <path class="dr" pathLength="1" style="--d:.8s" d="M1045 445 H1108 L1222 408"/>
+    <path class="dr" pathLength="1" style="--d:.9s" d="M1045 445 L960 484 L876 520 H780"/>
+    <path class="dr" pathLength="1" style="--d:.9s" d="M876 520 V620"/>
+    <path class="dr" pathLength="1" style="--d:1s" d="M1045 555 H1108 L1222 520"/>
+    <path class="dr" pathLength="1" style="--d:1s" d="M630 590 L686 560 H780"/>
+    <path class="dr" pathLength="1" style="--d:1.1s" d="M630 590 L690 622 H870 L920 663"/>
+  </g>
+  <rect class="fade" style="--d:0s" x="8" y="8" width="620" height="40" fill="rgba(255,255,255,.4)" stroke="#9ea1a8" stroke-width="1.5"/>
+  <text class="fade m" style="--d:.2s" x="22" y="34" font-size="16" fill="#1c2330">SYS_STATUS: ACTIVE // DOMAIN: EVAL_SCI // TARGET: AGENT_SYSTEMS</text>
+  <text class="a" style="--d:.2s" x="50" y="332" font-size="112" font-weight="700" textLength="1080" lengthAdjust="spacingAndGlyphs">The New Science of</text>
+  <text class="a" style="--d:.35s" x="50" y="440" font-size="112" font-weight="700" textLength="1030" lengthAdjust="spacingAndGlyphs">AI Agent Evaluation</text>
+  <rect class="grow" style="--d:.7s" x="50" y="478" width="1275" height="7" fill="#22c5df"/>
+  <text class="a" style="--d:.9s" x="52" y="536" font-size="33">Moving beyond static benchmarks to measure autonomous</text>
+  <text class="a" style="--d:1.05s" x="52" y="574" font-size="33">systems, complex trajectories, and real-world impact.</text>
+</svg></div></section>
+
+<!-- ============ SLIDE 2: SINGLE-PROMPT OBSOLETE ============ -->
+<section class="slide" id="s2"><div class="stage"><svg viewBox="0 0 1376 768">
+  <text class="a" x="32" y="67" font-size="50" textLength="1303" lengthAdjust="spacingAndGlyphs">Single-prompt evaluation methodologies are obsolete.</text>
+  <!-- left frame -->
+  <rect x="26" y="100" width="649" height="645" rx="6" fill="#c9cdd3" stroke="#4b515c" stroke-width="2"/>
+  <rect x="35" y="110" width="198" height="34" fill="#cfd3d9" stroke="#4b515c" stroke-width="2"/>
+  <text class="m" x="47" y="134" font-size="20">THE BREAKDOWN</text>
+  <rect x="36" y="155" width="630" height="582" fill="#f6f6f2" stroke="#4b515c" stroke-width="2"/>
+  <svg x="36" y="155" width="630" height="582" viewBox="67 290 1178 1088"><g id="s2c"></g></svg>
+  <!-- right frame -->
+  <rect x="701" y="100" width="649" height="565" rx="6" fill="#c9cdd3" stroke="#4b515c" stroke-width="2"/>
+  <rect x="711" y="110" width="170" height="34" fill="#cfd3d9" stroke="#4b515c" stroke-width="2"/>
+  <text class="m" x="724" y="134" font-size="20">THE REALITY</text>
+  <rect x="710" y="155" width="630" height="501" fill="#f6f6f2" stroke="#4b515c" stroke-width="2"/>
+  <svg x="710" y="155" width="630" height="501" viewBox="1330 290 1180 938"><g id="s2f"></g></svg>
+  <!-- conclusion -->
+  <rect class="fade" style="--d:.6s" x="701" y="680" width="648" height="66" rx="10" fill="#f2b01e" stroke="#8a5d00" stroke-width="2.5"/>
+  <text class="fade m b" style="--d:.7s" x="722" y="709" font-size="18.5" textLength="600" lengthAdjust="spacing">CONCLUSION: AN OUTCOME-FOCUSED BENCHMARKING PARADIGM</text>
+  <text class="fade m b" style="--d:.7s" x="722" y="733" font-size="18.5">CANNOT EVALUATE A DYNAMIC TRAJECTORY.</text>
+</svg>
+  <div class="ov">
+    <div class="c" style="left:calc(48/1376*100%);top:calc(160/768*100%);width:calc(300/1376*100%);display:flex;gap:.8cqw;align-items:center">
+      <span>RELEASE</span><input id="s2r" type="range" min="1" max="12" value="1" style="flex:1"><span id="s2rv" style="min-width:5.5em">1</span>
+    </div>
+  </div>
+</div></section>
+
+<!-- ============ SLIDE 3: REDEFINING THE OBJECT ============ -->
+<section class="slide" id="s3"><div class="stage"><svg viewBox="0 0 1376 768">
+  <text class="a" x="72" y="101" font-size="44" textLength="750" lengthAdjust="spacingAndGlyphs">Redefining the Object of Evaluation</text>
+  <text class="a" style="--d:.2s" x="72" y="146" font-size="30">We are no longer grading a model's isolated response. We are evaluating</text>
+  <text class="a" style="--d:.3s" x="72" y="186" font-size="30">a composite system's real-time interaction with an environment.</text>
+  <!-- legacy panel -->
+  <rect class="fade" style="--d:.3s" x="70" y="224" width="495" height="472" fill="none" stroke="#1c2330" stroke-width="2"/>
+  <line x1="70" y1="279" x2="565" y2="279" stroke="#1c2330" stroke-width="2"/>
+  <text class="m" x="317" y="262" font-size="25" text-anchor="middle">MODEL EVALUATION (LEGACY)</text>
+  <rect class="hl" style="--d:0s" x="280" y="306" width="173" height="54" stroke="#1c2330" stroke-width="2"/>
+  <rect class="hl" style="--d:1s" x="280" y="410" width="173" height="54" stroke="#1c2330" stroke-width="2"/>
+  <rect class="hl" style="--d:2s" x="280" y="514" width="173" height="54" stroke="#1c2330" stroke-width="2"/>
+  <rect class="hl" style="--d:3s" x="280" y="618" width="173" height="54" stroke="#1c2330" stroke-width="2"/>
+  <text class="m" x="366" y="340" font-size="21" text-anchor="middle">PROMPT</text>
+  <text class="m" x="366" y="444" font-size="21" text-anchor="middle">MODEL</text>
+  <text class="m" x="366" y="548" font-size="21" text-anchor="middle">RESPONSE</text>
+  <text class="m" x="366" y="652" font-size="21" text-anchor="middle">GRADER</text>
+  <path d="M366 362 V404 M366 466 V508 M366 570 V612" stroke="#6b7280" stroke-width="6" marker-end="url(#ahG)" fill="none"/>
+  <text class="m" x="167" y="640" font-size="19" text-anchor="middle">REFERENCE</text>
+  <text class="m" x="167" y="665" font-size="19" text-anchor="middle">ANSWER</text>
+  <path d="M233 645 H274" stroke="#6b7280" stroke-width="6" marker-end="url(#ahG)" fill="none"/>
+  <!-- agent panel -->
+  <rect class="fade" style="--d:.4s" x="611" y="224" width="695" height="472" fill="none" stroke="#1c2330" stroke-width="2"/>
+  <line x1="611" y1="279" x2="1306" y2="279" stroke="#1c2330" stroke-width="2"/>
+  <text class="m" x="958" y="262" font-size="25" text-anchor="middle">AGENT EVALUATION (EMERGING)</text>
+  <rect class="fade" style="--d:.6s" x="637" y="306" width="378" height="120" fill="#f6f6f2" stroke="#3b63d8" stroke-width="4"/>
+  <text class="m" x="826" y="344" font-size="20" text-anchor="middle">AGENT SYSTEM</text>
+  <rect x="655" y="363" width="85" height="43" fill="#f6f6f2" stroke="#1c2330" stroke-width="1.5"/>
+  <text class="m" x="697" y="390" font-size="18" text-anchor="middle">MODEL</text>
+  <text x="752" y="391" font-size="24" text-anchor="middle">+</text>
+  <rect x="768" y="363" width="116" height="43" fill="#f6f6f2" stroke="#1c2330" stroke-width="1.5"/>
+  <text class="m" x="826" y="390" font-size="18" text-anchor="middle">SCAFFOLD</text>
+  <text x="895" y="391" font-size="24" text-anchor="middle">+</text>
+  <rect x="911" y="363" width="86" height="43" fill="#f6f6f2" stroke="#1c2330" stroke-width="1.5"/>
+  <text class="m" x="954" y="390" font-size="18" text-anchor="middle">TOOLS</text>
+  <path class="fade" style="--d:.8s" d="M1015 367 H1191 V420" stroke="#3b63d8" stroke-width="12" fill="none" marker-end="url(#ahB)"/>
+  <rect x="1106" y="425" width="170" height="70" fill="#f6f6f2" stroke="#1c2330" stroke-width="2"/>
+  <text class="m" x="1191" y="455" font-size="18" text-anchor="middle">TRAJECTORY &amp;</text>
+  <text class="m" x="1191" y="478" font-size="18" text-anchor="middle">FINAL STATE</text>
+  <path d="M1191 495 V570" stroke="#3b63d8" stroke-width="12" fill="none" marker-end="url(#ahB)"/>
+  <rect x="1106" y="575" width="170" height="97" fill="#f6f6f2" stroke="#1c2330" stroke-width="2"/>
+  <text class="m" x="1191" y="606" font-size="21" text-anchor="middle">GRADER</text>
+  <text class="m" x="1191" y="630" font-size="16" text-anchor="middle">(RUBRIC / TESTS</text>
+  <text class="m" x="1191" y="652" font-size="16" text-anchor="middle">/ LLM JUDGE)</text>
+  <rect x="637" y="575" width="376" height="97" fill="#f6f6f2" stroke="#3b63d8" stroke-width="4"/>
+  <text class="m" x="825" y="632" font-size="22" text-anchor="middle">ENVIRONMENT</text>
+  <path d="M686 426 V570" stroke="#3b63d8" stroke-width="12" fill="none" marker-end="url(#ahB)"/>
+  <path d="M955 570 V432" stroke="#3b63d8" stroke-width="12" fill="none" marker-end="url(#ahB)"/>
+  <text class="m" x="703" y="510" font-size="18">ACTIONS</text>
+  <text class="m" x="806" y="510" font-size="18">OBSERVATIONS</text>
+  <path d="M1005 493 H972" stroke="#3b63d8" stroke-width="2.5" marker-end="url(#ahB)" fill="none"/>
+  <text class="m" x="1011" y="498" font-size="15">HUMAN</text>
+  <text class="m" x="1004" y="518" font-size="15">INTERVENTION</text>
+  <text class="m" x="1027" y="540" font-size="15">(OPTIONAL)</text>
+  <circle r="8" fill="#22c5df"><animateMotion dur="2.4s" repeatCount="indefinite" path="M686 426 V570"/></circle>
+  <circle r="8" fill="#3b63d8"><animateMotion dur="2.4s" repeatCount="indefinite" path="M955 570 V432"/></circle>
+</svg></div></section>
+
+<!-- ============ SLIDE 4: DIAGNOSTIC MATRIX ============ -->
+<section class="slide" id="s4"><div class="stage"><svg viewBox="0 0 1376 768">
+  <text class="a" x="40" y="84" font-size="50" font-weight="600" textLength="1292" lengthAdjust="spacingAndGlyphs">The Diagnostic Matrix: Model vs. Agent Evaluation.</text>
+  <rect class="fade" style="--d:.2s" x="318" y="224" width="500" height="506" fill="#e7e8e3"/>
+  <g stroke="#1c2330" stroke-width="2.5" fill="none" class="fade" style="--d:.2s">
+    <rect x="42" y="112" width="1293" height="618"/>
+    <line x1="42" y1="224" x2="1335" y2="224"/>
+    <line x1="42" y1="350" x2="1335" y2="350"/>
+    <line x1="42" y1="477" x2="1335" y2="477"/>
+    <line x1="42" y1="603" x2="1335" y2="603"/>
+    <line x1="317" y1="112" x2="317" y2="730"/>
+    <line x1="818" y1="112" x2="818" y2="730"/>
+  </g>
+  <text class="a m" style="--d:.3s" x="60" y="180" font-size="26" fill="#22c5df">DIMENSION</text>
+  <text class="a m" style="--d:.3s" x="345" y="180" font-size="26" fill="#22c5df">MODEL EVALUATION (LEGACY)</text>
+  <text class="a m" style="--d:.3s" x="836" y="180" font-size="26" fill="#22c5df">AGENT EVALUATION (EMERGING)</text>
+  <!-- row 1 -->
+  <g class="a" style="--d:.5s"><text class="m" x="60" y="297" font-size="26">Construct</text>
+  <text class="m" x="334" y="297" font-size="26">Single, isolated output.</text>
+  <text class="m" x="836" y="279" font-size="26">Dynamic, multi-step</text>
+  <text class="m" x="836" y="317" font-size="26">interaction and trajectories.</text></g>
+  <!-- row 2 -->
+  <g class="a" style="--d:.7s"><text class="m" x="60" y="422" font-size="26">Metrics</text>
+  <text class="m" x="334" y="422" font-size="26">Prioritizes pure Accuracy.</text>
+  <text class="m" x="836" y="407" font-size="26">Joint consideration of Cost,</text>
+  <text class="m" x="836" y="441" font-size="26">Latency, and Reliability.</text></g>
+  <!-- row 3 -->
+  <g class="a" style="--d:.9s"><text class="m" x="60" y="549" font-size="26">Variance</text>
+  <text class="m" x="334" y="532" font-size="26">Low variance (static</text>
+  <text class="m" x="334" y="567" font-size="26">prompts).</text>
+  <text class="m" x="836" y="532" font-size="26">High variance (compounding,</text>
+  <text class="m" x="836" y="567" font-size="26">multi-step stochasticity).</text></g>
+  <!-- row 4 -->
+  <g class="a" style="--d:1.1s"><text class="m" x="60" y="675" font-size="26">Contamination</text>
+  <text class="m" x="334" y="675" font-size="26">Training data leaks.</text>
+  <text class="m" x="836" y="660" font-size="26">Search-time retrieval and</text>
+  <text class="m" x="836" y="695" font-size="26">scaffold-level hardcoding.</text></g>
+  <!-- row hover bands -->
+  <rect class="rh" x="42" y="224" width="1293" height="126"/>
+  <rect class="rh" x="42" y="350" width="1293" height="127"/>
+  <rect class="rh" x="42" y="477" width="1293" height="126"/>
+  <rect class="rh" x="42" y="603" width="1293" height="127"/>
+</svg></div></section>
+
+<!-- ============ SLIDE 5: PART 1 ============ -->
+<section class="slide" id="s5"><div class="stage"><svg viewBox="0 0 1376 768">
+  <rect class="grow" style="--d:0s;transform-box:fill-box;transform-origin:top;" x="54" y="0" width="14" height="690" fill="#0b5cf0"/>
+  <text class="a m" x="100" y="192" font-size="34" letter-spacing="6">PART 1</text>
+  <text class="a" style="--d:.2s" x="100" y="310" font-size="112" font-weight="700" textLength="768" lengthAdjust="spacingAndGlyphs">The Science of</text>
+  <text class="a" style="--d:.3s" x="100" y="420" font-size="112" font-weight="700" textLength="735" lengthAdjust="spacingAndGlyphs">Measurement</text>
+  <text class="a" style="--d:.5s" x="103" y="497" font-size="34">Rebuilding the methodological toolkit</text>
+  <text class="a" style="--d:.6s" x="103" y="538" font-size="34">for validity, rigor, and causal attribution</text>
+  <text class="a" style="--d:.7s" x="103" y="586" font-size="34">in autonomous systems.</text>
+  <!-- server illustration -->
+  <rect class="fade" style="--d:.2s" x="838" y="80" width="468" height="310" fill="none" stroke="#9aa0aa" stroke-width="2"/>
+  <g class="fade" style="--d:.4s" stroke="#4b515c" stroke-width="2" fill="#fff">
+    <rect x="886" y="112" width="114" height="28"/><rect x="886" y="146" width="114" height="28"/>
+    <rect x="886" y="179" width="114" height="28"/><rect x="886" y="212" width="114" height="28"/>
+    <rect x="886" y="245" width="114" height="28"/>
+  </g>
+  <g class="fade" style="--d:.5s"><rect x="896" y="121" width="10" height="10" fill="#3b63d8"/><rect x="896" y="155" width="10" height="10" fill="#3b63d8"/><rect x="896" y="188" width="10" height="10" fill="#22c5df"/><rect x="896" y="221" width="10" height="10" fill="#3b63d8"/><rect x="896" y="254" width="10" height="10" fill="#22c5df"/></g>
+  <path class="dr" pathLength="1" style="--d:.8s" d="M1000 126 H1030 V192 H1000" fill="none" stroke="#4b515c" stroke-width="2"/>
+  <circle class="pop" style="--d:1s" cx="1030" cy="192" r="6" fill="#22c5df"/>
+  <path class="dr" pathLength="1" style="--d:.9s" d="M943 273 V296" fill="none" stroke="#4b515c" stroke-width="2"/>
+  <circle class="pop" style="--d:1.1s" cx="943" cy="296" r="6" fill="#22c5df"/>
+  <!-- timeline -->
+  <g class="fade" style="--d:.6s">
+    <rect x="1062" y="112" width="72" height="28" fill="#22c5df" stroke="#1c2330" stroke-width="1.5"/>
+    <text class="m" x="1140" y="131" font-size="13" fill="#6b7280">9:85:AM</text>
+    <rect x="1100" y="156" width="70" height="34" fill="#fff" stroke="#4b515c" stroke-width="1.5"/>
+    <text class="m" x="1178" y="176" font-size="13" fill="#6b7280">1:25:PM</text>
+    <rect x="1132" y="200" width="70" height="34" fill="#fff" stroke="#4b515c" stroke-width="1.5"/>
+    <text class="m" x="1210" y="220" font-size="13" fill="#6b7280">1:35:PM</text>
+    <rect x="1133" y="245" width="70" height="34" fill="#22c5df" stroke="#1c2330" stroke-width="1.5"/>
+    <text class="m" x="1058" y="216" font-size="13" fill="#6b7280">1:25:PM</text>
+    <rect x="1200" y="338" width="72" height="34" fill="#22c5df" stroke="#1c2330" stroke-width="1.5"/>
+    <text class="m" x="1090" y="320" font-size="13" fill="#6b7280">1:45:AM</text>
+    <path d="M1072 140 V156" stroke="#4b515c" stroke-width="2" fill="none"/>
+    <path d="M1112 190 V200" stroke="#4b515c" stroke-width="2" fill="none"/>
+    <path d="M1140 280 V340" stroke="#4b515c" stroke-width="2" fill="none" marker-end="url(#ahK)"/>
+    <rect class="glow" style="--d:0s" x="1133" y="343" width="14" height="14" fill="#3b63d8"/>
+    <rect class="glow" style="--d:.8s" x="1176" y="300" width="14" height="14" fill="#3b63d8"/>
+    <rect class="glow" style="--d:1.4s" x="1231" y="298" width="14" height="14" fill="#3b63d8"/>
+  </g>
+  <!-- scale -->
+  <rect class="fade" style="--d:.4s" x="1017" y="415" width="290" height="275" fill="none" stroke="#4b515c" stroke-width="2"/>
+  <g class="rock">
+    <rect x="1152" y="480" width="16" height="160" fill="#5a6170"/>
+    <line x1="1085" y1="500" x2="1245" y2="470" stroke="#3b63d8" stroke-width="5"/>
+    <circle cx="1160" cy="482" r="9" fill="#22c5df"/>
+    <line x1="1085" y1="500" x2="1055" y2="568" stroke="#4b515c" stroke-width="2"/>
+    <line x1="1085" y1="500" x2="1135" y2="568" stroke="#4b515c" stroke-width="2"/>
+    <path d="M1050 570 H1140 L1120 595 H1070 Z" fill="#cdd2dc" stroke="#4b515c" stroke-width="2"/>
+    <rect x="1072" y="552" width="12" height="16" fill="#3b63d8"/><rect x="1090" y="548" width="12" height="20" fill="#6b7280"/>
+    <line x1="1245" y1="470" x2="1210" y2="555" stroke="#4b515c" stroke-width="2"/>
+    <line x1="1245" y1="470" x2="1280" y2="555" stroke="#4b515c" stroke-width="2"/>
+    <path d="M1200 555 H1290 L1272 575 H1218 Z" fill="#22c5df" stroke="#4b515c" stroke-width="2"/>
+  </g>
+  <rect x="1098" y="630" width="124" height="14" fill="#5a6170"/>
+  <line x1="1050" y1="645" x2="1270" y2="645" stroke="#4b515c" stroke-width="2"/>
+</svg></div></section>
+
+<!-- ============ SLIDE 6: CONSTRUCT VALIDITY ============ -->
+<section class="slide" id="s6"><div class="stage"><svg viewBox="0 0 1376 768">
+  <text class="a" x="40" y="84" font-size="50" font-weight="600" textLength="825" lengthAdjust="spacingAndGlyphs">The Crisis of Construct Validity.</text>
+  <rect class="fade" x="42" y="112" width="1293" height="365" fill="none" stroke="#1c2330" stroke-width="2.5"/>
+  <g stroke="#cfd1ca" stroke-width="2" class="fade">
+    <line x1="298" y1="112" x2="298" y2="477"/><line x1="558" y1="112" x2="558" y2="477"/>
+    <line x1="818" y1="112" x2="818" y2="477"/><line x1="1078" y1="112" x2="1078" y2="477"/>
+    <line x1="42" y1="310" x2="1335" y2="310"/>
+  </g>
+  <path class="dr" pathLength="1" style="--d:.3s" d="M175 265 H1190" stroke="#e9a31a" stroke-width="8" fill="none" marker-end="url(#ahO)"/>
+  <text class="a m" style="--d:.6s" x="198" y="254" font-size="19">THE REPLAY AGENT</text>
+  <path class="dr" pathLength="1" style="--d:.5s" d="M195 310 H1180" stroke="#e9a31a" stroke-width="5" fill="none" marker-end="url(#ahO)"/>
+  <rect class="fade" style="--d:.7s" x="351" y="279" width="149" height="63" fill="#e6e7e2" stroke="#1c2330" stroke-width="2"/>
+  <rect class="fade" style="--d:.7s" x="613" y="279" width="150" height="63" fill="#e6e7e2" stroke="#1c2330" stroke-width="2"/>
+  <rect class="fade" style="--d:.7s" x="875" y="279" width="150" height="63" fill="#e6e7e2" stroke="#1c2330" stroke-width="2"/>
+  <text class="a m" style="--d:.8s" x="425" y="319" font-size="20" text-anchor="middle">OBSTACLE</text>
+  <text class="a m" style="--d:.8s" x="688" y="319" font-size="20" text-anchor="middle">OBSTACLE</text>
+  <text class="a m" style="--d:.8s" x="950" y="319" font-size="20" text-anchor="middle">OBSTACLE</text>
+  <circle class="pop" style="--d:.2s" cx="137" cy="310" r="58" fill="#e6e7e2" stroke="#1c2330" stroke-width="2.5"/>
+  <text class="a m" style="--d:.5s" x="137" y="318" font-size="20" text-anchor="middle">START</text>
+  <circle class="pop" style="--d:.2s" cx="1237" cy="310" r="62" fill="#e6e7e2" stroke="#1c2330" stroke-width="2.5"/>
+  <text class="a m" style="--d:.5s" x="1237" y="318" font-size="20" text-anchor="middle">SUCCESS</text>
+  <path id="autoP" class="dr mvA" pathLength="1" style="--d:.9s" d="M197 340 C250 340 290 330 310 300 C340 260 380 160 425 160 C480 160 520 240 545 300 C570 380 620 430 686 436 C740 436 790 380 830 300 C860 240 900 170 950 170 C1000 170 1050 220 1075 280 C1095 330 1120 370 1190 360" fill="none" stroke="#22c5df" stroke-width="8" stroke-linecap="round"/>
+  <circle r="10" fill="#22c5df"><animateMotion dur="6s" repeatCount="indefinite" path="M197 340 C250 340 290 330 310 300 C340 260 380 160 425 160 C480 160 520 240 545 300 C570 380 620 430 686 436 C740 436 790 380 830 300 C860 240 900 170 950 170 C1000 170 1050 220 1075 280 C1095 330 1120 370 1190 360"/></circle>
+  <text class="a m" style="--d:1s" x="200" y="382" font-size="19">THE AUTONOMOUS AGENT</text>
+  <rect class="fade" style="--d:1.1s" x="42" y="505" width="632" height="170" fill="#f6f6f2" stroke="#e9a31a" stroke-width="4"/>
+  <text class="a" style="--d:1.2s" x="67" y="548" font-size="30" font-weight="600">The Replay Agent</text>
+  <text class="a m" style="--d:1.3s" x="67" y="590" font-size="22">Achieves a top score by blindly reciting</text>
+  <text class="a m" style="--d:1.35s" x="67" y="622" font-size="22">a memorized action sequence. High</text>
+  <text class="a m" style="--d:1.4s" x="67" y="653" font-size="22">success rate, zero reasoning.</text>
+  <rect class="fade" style="--d:1.1s" x="701" y="505" width="634" height="170" fill="#f6f6f2" stroke="#22c5df" stroke-width="4"/>
+  <text class="a" style="--d:1.2s" x="727" y="548" font-size="30" font-weight="600">The Autonomous Agent</text>
+  <text class="a m" style="--d:1.3s" x="727" y="590" font-size="22">Adapts to the environment's current</text>
+  <text class="a m" style="--d:1.35s" x="727" y="622" font-size="22">state. Evaluators must verify the</text>
+  <text class="a m" style="--d:1.4s" x="727" y="653" font-size="22">process, not just the outcome.</text>
+  <line x1="0" y1="703" x2="1376" y2="703" stroke="#1c2330" stroke-width="2"/>
+  <text class="a" style="--d:1.5s" x="55" y="744" font-size="23"><tspan font-weight="700">Takeaway:</tspan> If a metric can be gamed by an agent lacking the core capability, the metric lacks construct validity.</text>
+</svg></div></section>
+
+<!-- ============ SLIDE 7: MEASURING BEYOND ACCURACY ============ -->
+<section class="slide" id="s7"><div class="stage"><svg viewBox="0 0 1376 768">
+  <rect class="fade" x="24" y="22" width="1328" height="638" fill="none" stroke="#1c2330" stroke-width="2"/>
+  <line x1="24" y1="162" x2="1352" y2="162" stroke="#1c2330" stroke-width="2"/>
+  <text class="a m" x="62" y="92" font-size="50" textLength="770" lengthAdjust="spacingAndGlyphs">Measuring Beyond Accuracy</text>
+  <text class="a m" style="--d:.2s" x="62" y="133" font-size="24">In agent deployments, maximizing accuracy alone leads to unbounded costs.</text>
+  <g stroke="#dedfd8" stroke-width="2" class="fade">
+    <line x1="228" y1="192" x2="228" y2="590"/><line x1="345" y1="192" x2="345" y2="590"/><line x1="461" y1="192" x2="461" y2="590"/>
+    <line x1="578" y1="192" x2="578" y2="590"/><line x1="694" y1="192" x2="694" y2="590"/><line x1="811" y1="192" x2="811" y2="590"/>
+    <line x1="927" y1="192" x2="927" y2="590"/><line x1="1044" y1="192" x2="1044" y2="590"/><line x1="1160" y1="192" x2="1160" y2="590"/>
+    <line x1="112" y1="231" x2="1277" y2="231"/><line x1="112" y1="271" x2="1277" y2="271"/><line x1="112" y1="311" x2="1277" y2="311"/>
+    <line x1="112" y1="351" x2="1277" y2="351"/><line x1="112" y1="391" x2="1277" y2="391"/><line x1="112" y1="431" x2="1277" y2="431"/>
+    <line x1="112" y1="471" x2="1277" y2="471"/><line x1="112" y1="511" x2="1277" y2="511"/><line x1="112" y1="551" x2="1277" y2="551"/>
+  </g>
+  <line x1="112" y1="590" x2="112" y2="196" stroke="#1c2330" stroke-width="2.5" marker-end="url(#ahK)"/>
+  <line x1="112" y1="590" x2="1282" y2="590" stroke="#1c2330" stroke-width="2.5" marker-end="url(#ahK)"/>
+  <text class="m" transform="translate(88 390) rotate(-90)" x="0" y="0" font-size="25" text-anchor="middle">Accuracy</text>
+  <text class="m" x="686" y="634" font-size="25" text-anchor="middle">Cost (Compute / Credits / Latency)</text>
+  <path class="dr" pathLength="1" style="--d:.5s" d="M208 444 C225 380 270 300 320 274 C360 255 390 242 411 237 C440 230 475 222 504 220" fill="none" stroke="#22c5df" stroke-width="6" stroke-linecap="round"/>
+  <g id="s7pts"></g>
+  <!-- callout 1 -->
+  <line class="dr" pathLength="1" style="--d:1s" x1="756" y1="220" x2="530" y2="220" stroke="#22c5df" stroke-width="3" marker-end="url(#ahC)"/>
+  <circle class="pop" style="--d:1.1s" cx="773" cy="220" r="16" fill="#5cc9dc" stroke="#1c2330" stroke-width="2"/>
+  <text class="a m" style="--d:1.2s" x="773" y="227" font-size="18" text-anchor="middle">1</text>
+  <text class="a m" style="--d:1.2s" x="802" y="226" font-size="21"><tspan font-weight="700">The Pareto Frontier:</tspan> Models on this</text>
+  <text class="a m" style="--d:1.25s" x="802" y="251" font-size="21">curve represent the optimal tradeoff.</text>
+  <text class="a m" style="--d:1.3s" x="802" y="276" font-size="21">Large cost increases here buy very</text>
+  <text class="a m" style="--d:1.35s" x="802" y="301" font-size="21">little additional accuracy.</text>
+  <!-- callout 2 -->
+  <line class="dr" pathLength="1" style="--d:1.4s" x1="798" y1="366" x2="655" y2="366" stroke="#22c5df" stroke-width="3" marker-end="url(#ahC)"/>
+  <circle class="pop" style="--d:1.5s" cx="815" cy="366" r="16" fill="#5cc9dc" stroke="#1c2330" stroke-width="2"/>
+  <text class="a m" style="--d:1.6s" x="815" y="373" font-size="18" text-anchor="middle">2</text>
+  <text class="a m" style="--d:1.6s" x="846" y="370" font-size="21"><tspan font-weight="700">Dominated Space:</tspan> Agents here are</text>
+  <text class="a m" style="--d:1.65s" x="846" y="394" font-size="21">beaten on both dimensions (more</text>
+  <text class="a m" style="--d:1.7s" x="846" y="418" font-size="21">expensive and less accurate).</text>
+  <!-- legend -->
+  <circle cx="172" cy="520" r="8" fill="#5b6270"/><text class="m" x="190" y="528" font-size="22">Dominated Agents</text>
+  <circle cx="172" cy="551" r="8" fill="#1f3fe0"/><text class="m" x="190" y="559" font-size="22">Pareto Optimal</text>
+  <!-- rule -->
+  <rect class="fade" style="--d:1.8s" x="38" y="694" width="1304" height="58" fill="none" stroke="#e9a31a" stroke-width="4"/>
+  <rect class="fade" style="--d:1.8s" x="34" y="690" width="1304" height="58" fill="#f6f6f2" stroke="#1c2330" stroke-width="2.5"/>
+  <text class="a m" style="--d:1.9s" x="56" y="726" font-size="24"><tspan font-weight="700">Rule:</tspan> Accuracy must always be reported jointly with Cost, Latency, and Reliability.</text>
+</svg></div></section>
+
+<!-- ============ SLIDE 8: MATHEMATICS OF LONG TRAJECTORIES ============ -->
+<section class="slide" id="s8"><div class="stage"><svg viewBox="0 0 1376 768">
+  <text class="a" x="60" y="110" font-size="58" font-weight="600" textLength="1120" lengthAdjust="spacingAndGlyphs">The Mathematics of Long Trajectories.</text>
+  <rect class="fade" x="58" y="157" width="722" height="413" rx="4" fill="none" stroke="#4b515c" stroke-width="2"/>
+  <g stroke="#cfd1ca" stroke-width="2" class="fade">
+    <line x1="230" y1="157" x2="230" y2="570"/><line x1="322" y1="157" x2="322" y2="570"/><line x1="414" y1="157" x2="414" y2="570"/>
+    <line x1="506" y1="157" x2="506" y2="570"/><line x1="598" y1="157" x2="598" y2="570"/><line x1="690" y1="157" x2="690" y2="570"/>
+    <line x1="58" y1="295" x2="780" y2="295"/><line x1="58" y1="432" x2="780" y2="432"/>
+  </g>
+  <text class="a m" style="--d:.2s" x="82" y="240" font-size="34">pass@1</text>
+  <text class="a m" style="--d:.3s" x="82" y="378" font-size="34">pass@5</text>
+  <text class="a m" style="--d:.4s" x="82" y="512" font-size="34">pass^5</text>
+  <circle class="pop glow" style="--d:.5s" cx="276" cy="228" r="25" fill="#22c5df"/>
+  <circle class="pop" style="--d:.9s" cx="276" cy="366" r="25" fill="#22c5df"/>
+  <circle class="pop" style="--d:1.1s" cx="368" cy="366" r="25" fill="#e9a31a"/>
+  <circle class="pop" style="--d:1.2s" cx="460" cy="366" r="25" fill="#e9a31a"/>
+  <circle class="pop" style="--d:1.3s" cx="552" cy="366" r="25" fill="#e9a31a"/>
+  <circle class="pop" style="--d:1.4s" cx="644" cy="366" r="25" fill="#e9a31a"/>
+  <circle class="pop" style="--d:1.6s" cx="276" cy="500" r="25" fill="#22c5df"/>
+  <circle class="pop" style="--d:1.7s" cx="368" cy="500" r="25" fill="#22c5df"/>
+  <circle class="pop" style="--d:1.8s" cx="460" cy="500" r="25" fill="#22c5df"/>
+  <circle class="pop" style="--d:1.9s" cx="552" cy="500" r="25" fill="#22c5df"/>
+  <circle class="pop" style="--d:2s" cx="644" cy="500" r="25" fill="#22c5df"/>
+  <rect class="fade" style="--d:.6s" x="792" y="157" width="526" height="137" rx="3" fill="none" stroke="#4b515c" stroke-width="2"/>
+  <text class="a m" style="--d:.7s" x="808" y="213" font-size="23">Evaluates a single run. Obscures</text>
+  <text class="a m" style="--d:.75s" x="808" y="246" font-size="23">multi-step brittleness.</text>
+  <rect class="fade" style="--d:.9s" x="792" y="320" width="526" height="137" rx="3" fill="none" stroke="#4b515c" stroke-width="2"/>
+  <text class="a m" style="--d:1s" x="808" y="338" font-size="23">Scores a 'Pass' if the agent</text>
+  <text class="a m" style="--d:1.05s" x="808" y="366" font-size="23">succeeds at least once in 5</text>
+  <text class="a m" style="--d:1.1s" x="808" y="394" font-size="23">attempts. A highly forgiving</text>
+  <text class="a m" style="--d:1.15s" x="808" y="422" font-size="23">aggregate metric.</text>
+  <rect class="fade" style="--d:1.2s" x="792" y="468" width="526" height="102" rx="3" fill="none" stroke="#4b515c" stroke-width="2"/>
+  <text class="a m" style="--d:1.3s" x="808" y="496" font-size="23">The true measure of reliability.</text>
+  <text class="a m" style="--d:1.35s" x="808" y="524" font-size="23">Quantifies consistency by</text>
+  <text class="a m" style="--d:1.4s" x="808" y="552" font-size="23">demanding success over all runs.</text>
+  <rect class="fade" style="--d:1.5s" x="58" y="605" width="1260" height="115" rx="3" fill="#f6f6f2" stroke="#e9a31a" stroke-width="3"/>
+  <rect x="58" y="605" width="1260" height="14" fill="#e9a31a"/>
+  <text class="a m" style="--d:1.6s" x="80" y="666" font-size="24">Agent stochasticity requires new math. pass@k is not evidence of reliability.</text>
+  <text class="a m" style="--d:1.7s" x="80" y="698" font-size="24">We must measure pass^k to ensure consistency across variable trajectories.</text>
+</svg></div></section>
+
+<!-- ============ SLIDE 9: CAUSAL ATTRIBUTION ============ -->
+<section class="slide" id="s9"><div class="stage"><svg viewBox="0 0 1376 768">
+  <g stroke="#e3e2dc" stroke-width="2" class="fade"><line x1="360" y1="0" x2="360" y2="768"/><line x1="688" y1="0" x2="688" y2="768"/><line x1="1015" y1="0" x2="1015" y2="768"/><line x1="0" y1="730" x2="1376" y2="730"/></g>
+  <text class="a m" x="55" y="84" font-size="45">The Causal Attribution Problem.</text>
+  <text class="a m" style="--d:.2s" x="55" y="127" font-size="24">When an agent's performance improves, was it the underlying model or the</text>
+  <text class="a m" style="--d:.25s" x="55" y="157" font-size="24">surrounding scaffold?</text>
+  <!-- left panel -->
+  <rect class="fade" style="--d:.3s" x="55" y="181" width="622" height="527" fill="#f6f6f2" stroke="#3b3f47" stroke-width="3"/>
+  <rect x="55" y="181" width="622" height="47" fill="#3c3f44"/>
+  <text class="m" x="68" y="215" font-size="25" fill="#f6f6f2">The Confounded Setup</text>
+  <rect class="fade" style="--d:.5s" x="175" y="255" width="371" height="85" fill="#f6f6f2" stroke="#1c2330" stroke-width="2.5"/>
+  <text class="a m" style="--d:.6s" x="360" y="307" font-size="24" text-anchor="middle">Model A + Scaffold 1</text>
+  <path class="dr" pathLength="1" style="--d:.8s" d="M357 340 V492" stroke="#3d4450" stroke-width="5" fill="none" marker-end="url(#ahK)"/>
+  <path class="dr" pathLength="1" style="--d:1.1s" d="M297 350 L420 470" stroke="#e9a31a" stroke-width="30" stroke-linecap="round" fill="none"/>
+  <path class="dr" pathLength="1" style="--d:1.3s" d="M420 350 L297 470" stroke="#e9a31a" stroke-width="30" stroke-linecap="round" fill="none"/>
+  <rect class="fade" style="--d:1.2s" x="175" y="495" width="371" height="85" fill="#f6f6f2" stroke="#1c2330" stroke-width="2.5"/>
+  <text class="a m" style="--d:1.3s" x="360" y="547" font-size="24" text-anchor="middle">Model B + Scaffold 2</text>
+  <text class="a m" style="--d:1.5s" x="75" y="630" font-size="23">Attribution is impossible. If the</text>
+  <text class="a m" style="--d:1.55s" x="75" y="663" font-size="23">score changes, you cannot isolate the</text>
+  <text class="a m" style="--d:1.6s" x="75" y="696" font-size="23">cause.</text>
+  <!-- right panel -->
+  <rect class="fade" style="--d:.3s" x="700" y="181" width="620" height="527" fill="#f6f6f2" stroke="#3b3f47" stroke-width="3"/>
+  <rect x="700" y="181" width="620" height="47" fill="#3c3f44"/>
+  <text class="m" x="713" y="215" font-size="25" fill="#f6f6f2">The Factorial Design</text>
+  <g class="a m" style="--d:.5s" font-size="24" text-anchor="middle"><text x="955" y="284">Model A</text><text x="1085" y="284">Model B</text><text x="1216" y="284">Model C</text></g>
+  <g class="m a" style="--d:.5s" font-size="24"><text x="723" y="362">Scaffold 1</text><text x="723" y="455">Scaffold 2</text><text x="723" y="547">Scaffold 3</text></g>
+  <rect class="fade" style="--d:.6s" x="888" y="303" width="394" height="279" fill="none" stroke="#1c2330" stroke-width="4"/>
+  <g stroke="#1c2330" stroke-width="4" class="fade" style="--d:.6s"><line x1="1020" y1="303" x2="1020" y2="582"/><line x1="1150" y1="303" x2="1150" y2="582"/><line x1="888" y1="397" x2="1282" y2="397"/><line x1="888" y1="490" x2="1282" y2="490"/></g>
+  <g fill="none" stroke="#2fb8cc" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <g id="chkWrap"></g>
+  </g>
+  <text class="a m" style="--d:1.9s" x="718" y="630" font-size="23">Hold budgets and environments fixed.</text>
+  <text class="a m" style="--d:1.95s" x="718" y="663" font-size="23">Systematically cross-test every model-</text>
+  <text class="a m" style="--d:2s" x="718" y="696" font-size="23">scaffold pairing to isolate effects.</text>
+</svg></div></section>
+
+<!-- ============ SLIDE 10: CONTAMINATION ============ -->
+<section class="slide" id="s10"><div class="stage"><svg viewBox="0 0 1376 768">
+  <text class="a m" x="55" y="84" font-size="49">Expanding Vectors of Contamination.</text>
+  <text class="a m" style="--d:.2s" x="55" y="127" font-size="24">LLM contamination was just training data. Agents introduce dynamic,</text>
+  <text class="a m" style="--d:.25s" x="55" y="157" font-size="24">test-time leakage.</text>
+  <line x1="40" y1="180" x2="1340" y2="180" stroke="#1c2330" stroke-width="2.5"/>
+  <rect class="fade" style="--d:.3s" x="480" y="222" width="415" height="425" fill="none" stroke="#4b515c" stroke-width="3"/>
+  <rect class="fade" style="--d:.4s" x="503" y="245" width="370" height="380" fill="none" stroke="#4b515c" stroke-width="5" stroke-dasharray="22 14"/>
+  <text class="a" style="--d:.6s" x="687" y="408" font-size="32" text-anchor="middle">Secure</text>
+  <text class="a" style="--d:.65s" x="687" y="446" font-size="32" text-anchor="middle">Evaluation</text>
+  <text class="a" style="--d:.7s" x="687" y="484" font-size="32" text-anchor="middle">Environment</text>
+  <!-- legacy -->
+  <text class="a m" style="--d:.5s" x="75" y="246" font-size="28">Legacy: Training Data</text>
+  <text class="a m" style="--d:.6s" x="75" y="282" font-size="24">Benchmark tasks seen</text>
+  <text class="a m" style="--d:.65s" x="75" y="312" font-size="24">verbatim during the</text>
+  <text class="a m" style="--d:.7s" x="75" y="342" font-size="24">LLM's pre-training</text>
+  <text class="a m" style="--d:.75s" x="75" y="372" font-size="24">phase.</text>
+  <line class="dr" pathLength="1" style="--d:.8s" x1="440" y1="240" x2="595" y2="365" stroke="#3d4450" stroke-width="22" marker-end="url(#ahK)"/>
+  <!-- agentic search -->
+  <text class="a m" style="--d:1s" x="75" y="512" font-size="28">Agentic: Search-Time</text>
+  <text class="a m" style="--d:1s" x="75" y="548" font-size="28">Contamination</text>
+  <text class="a m" style="--d:1.1s" x="75" y="590" font-size="24">An agent using web-search</text>
+  <text class="a m" style="--d:1.15s" x="75" y="619" font-size="24">tools at inference time</text>
+  <text class="a m" style="--d:1.2s" x="75" y="648" font-size="24">to literally look up the</text>
+  <text class="a m" style="--d:1.25s" x="75" y="676" font-size="24">benchmark's expected</text>
+  <text class="a m" style="--d:1.3s" x="75" y="705" font-size="24">answers.</text>
+  <line class="dr" pathLength="1" style="--d:1.2s" x1="470" y1="690" x2="617" y2="520" stroke="#22c5df" stroke-width="22" marker-end="url(#ahC)"/>
+  <!-- scaffold -->
+  <text class="a m" style="--d:.9s" x="968" y="396" font-size="28">Agentic: Scaffold</text>
+  <text class="a m" style="--d:.95s" x="968" y="436" font-size="28">&amp; Prompts</text>
+  <text class="a m" style="--d:1.05s" x="970" y="472" font-size="24">Knowledge of test</text>
+  <text class="a m" style="--d:1.1s" x="970" y="503" font-size="24">samples secretly</text>
+  <text class="a m" style="--d:1.15s" x="970" y="533" font-size="24">hardcoded into the</text>
+  <text class="a m" style="--d:1.2s" x="970" y="563" font-size="24">agent's harness or</text>
+  <text class="a m" style="--d:1.25s" x="970" y="594" font-size="24">tool logic.</text>
+  <line class="dr" pathLength="1" style="--d:1s" x1="955" y1="425" x2="812" y2="425" stroke="#e9a31a" stroke-width="22" marker-end="url(#ahO)"/>
+</svg></div></section>
+
+<!-- ============ SLIDE 11: TOOLKIT ============ -->
+<section class="slide" id="s11"><div class="stage"><svg viewBox="0 0 1376 768">
+  <text class="a m" x="55" y="84" font-size="45">The Modern Evaluator's Technical Toolkit.</text>
+  <!-- cards -->
+  <g class="fade" stroke="#3b3f47" stroke-width="3" fill="#f6f6f2"><rect x="55" y="182" width="411" height="526"/><rect x="482" y="182" width="411" height="526"/><rect x="908" y="182" width="411" height="526"/></g>
+  <g fill="#d3d6db" stroke="#3b3f47" stroke-width="3" class="fade"><rect x="55" y="182" width="411" height="56"/><rect x="482" y="182" width="411" height="56"/><rect x="908" y="182" width="411" height="56"/></g>
+  <text class="a m" style="--d:.3s" x="70" y="220" font-size="25">DYNAMIC_BENCHMARKS</text>
+  <text class="a m" style="--d:.35s" x="497" y="220" font-size="25">LOG_TELEMETRY</text>
+  <text class="a m" style="--d:.4s" x="925" y="220" font-size="25">LLM_JUDGES</text>
+  <!-- icon 1: recycle -->
+  <g class="spinr" style="transform-origin:262px 372px;transform-box:view-box" >
+    <circle cx="262" cy="372" r="72" fill="none" stroke="#2d4fa6" stroke-width="16" stroke-dasharray="120 500" transform="rotate(0 262 372)"/>
+    <circle cx="262" cy="372" r="72" fill="none" stroke="#2d4fa6" stroke-width="16" stroke-dasharray="120 500" transform="rotate(120 262 372)"/>
+    <circle cx="262" cy="372" r="72" fill="none" stroke="#2d4fa6" stroke-width="16" stroke-dasharray="120 500" transform="rotate(240 262 372)"/>
+    <circle cx="262" cy="372" r="72" fill="none" stroke="#e9a31a" stroke-width="6" stroke-dasharray="26 24" transform="rotate(60 262 372)"/>
+  </g>
+  <!-- icon 2: magnifier -->
+  <g class="a" style="--d:.6s">
+    <line x1="735" y1="408" x2="778" y2="452" stroke="#2d4fa6" stroke-width="22" stroke-linecap="round"/>
+    <circle cx="690" cy="362" r="62" fill="#f6f6f2" stroke="#2d4fa6" stroke-width="12"/>
+    <line class="dr" pathLength="1" style="--d:.9s" x1="640" y1="345" x2="690" y2="325" stroke="#22c5df" stroke-width="5"/>
+    <line class="dr" pathLength="1" style="--d:1s" x1="650" y1="380" x2="735" y2="352" stroke="#e9a31a" stroke-width="5"/>
+    <line class="dr" pathLength="1" style="--d:1.1s" x1="660" y1="402" x2="720" y2="392" stroke="#22c5df" stroke-width="5"/>
+    <circle class="glow" cx="640" cy="345" r="6" fill="#2d4fa6"/><circle class="glow" style="--d:.5s" cx="735" cy="352" r="6" fill="#e9a31a"/>
+  </g>
+  <!-- icon 3: scales -->
+  <g class="a" style="--d:.8s" stroke="#2d4fa6" stroke-width="7" fill="none">
+    <line x1="1120" y1="265" x2="1120" y2="440"/>
+    <line x1="1063" y1="302" x2="1177" y2="282"/>
+    <line x1="1063" y1="302" x2="1040" y2="372"/><line x1="1063" y1="302" x2="1088" y2="372"/>
+    <line x1="1177" y1="282" x2="1152" y2="352"/><line x1="1177" y1="282" x2="1202" y2="352"/>
+    <path d="M1025 372 H1100 Q1062 405 1025 372 Z"/>
+    <path d="M1127 352 H1202 Q1165 385 1127 352 Z" stroke="#e9a31a"/>
+    <line x1="1080" y1="440" x2="1160" y2="440"/>
+  </g>
+  <!-- bodies -->
+  <g class="a m" style="--d:1s" font-size="23.5">
+    <text x="75" y="500">Refresh tasks continuously</text><text x="75" y="528">via live production traffic</text>
+    <text x="75" y="556">to prevent benchmark</text><text x="75" y="584">saturation. Use Item</text>
+    <text x="75" y="612">Response Theory and test</text><text x="75" y="640">equating to maintain</text>
+    <text x="75" y="668">longitudinal</text><text x="75" y="696">comparability.</text>
+    <text x="500" y="500">Move beyond pass/fail</text><text x="500" y="528">outcomes. Inspect Chain of</text>
+    <text x="500" y="556">Thought (CoT) reasoning</text><text x="500" y="584">traces to catch search-</text>
+    <text x="500" y="612">time contamination and</text><text x="500" y="640">coamination and reward</text>
+    <text x="500" y="668">hacking that is invisible</text><text x="500" y="696">in the final score.</text>
+    <text x="925" y="500">Scale grading using</text><text x="925" y="528">automated LLM panels, but</text>
+    <text x="925" y="556">rigorously monitor 'judge</text><text x="925" y="584">error'. Validate</text>
+    <text x="925" y="612">autograders against</text><text x="925" y="640">human-coded holdouts to</text>
+    <text x="925" y="668">prevent adversarial</text><text x="925" y="696">vulnerabilities.</text>
+  </g>
+</svg></div></section>
+
+<!-- ============ SLIDE 12: PART 2 ============ -->
+<section class="slide" id="s12"><div class="stage"><svg viewBox="0 0 1376 768">
+  <g class="fade" style="--d:0s">
+    <g fill="none" stroke="#1c2330" stroke-width="3">
+      <circle class="rip" style="--d:0s" cx="1420" cy="384" r="640"/>
+      <circle class="rip" style="--d:-1s" cx="1420" cy="384" r="540"/>
+      <circle class="rip" style="--d:-2s" cx="1420" cy="384" r="450"/>
+      <circle class="rip" style="--d:-3s" cx="1420" cy="384" r="300"/>
+      <circle class="rip" style="--d:-4s" cx="1420" cy="384" r="202"/>
+    </g>
+  </g>
+  <rect x="0" y="0" width="1376" height="16" fill="#2b2e35"/>
+  <rect x="0" y="752" width="1376" height="16" fill="#2b2e35"/>
+  <rect x="0" y="0" width="20" height="768" fill="#2b2e35"/>
+  <rect x="1356" y="0" width="20" height="768" fill="#2b2e35"/>
+  <text class="a m" x="83" y="224" font-size="26" letter-spacing="6">PART 2</text>
+  <text class="a" style="--d:.2s" x="83" y="330" font-size="108" font-weight="700" textLength="502" lengthAdjust="spacingAndGlyphs">Expanding</text>
+  <text class="a" style="--d:.3s" x="83" y="432" font-size="108" font-weight="700" textLength="482" lengthAdjust="spacingAndGlyphs">the Scope</text>
+  <text class="a" style="--d:.5s" x="83" y="506" font-size="32">Moving evaluation out of the</text>
+  <text class="a" style="--d:.6s" x="83" y="552" font-size="32">vacuum of the lab to measure</text>
+  <text class="a" style="--d:.7s" x="83" y="594" font-size="32">sociotechnical impact, human</text>
+  <text class="a" style="--d:.8s" x="83" y="637" font-size="32">interaction, and systemic risk.</text>
+</svg></div></section>
+
+<!-- ============ SLIDE 13: SOCIOTECHNICAL FRAMEWORK ============ -->
+<section class="slide" id="s13"><div class="stage"><svg viewBox="0 0 1376 768">
+  <rect class="fade" x="22" y="20" width="1332" height="726" fill="none" stroke="#3b3f47" stroke-width="2"/>
+  <g stroke="#dedfd8" stroke-width="2" class="fade"><line x1="22" y1="383" x2="1354" y2="383"/><line x1="687" y1="20" x2="687" y2="746"/></g>
+  <text class="a" x="52" y="86" font-size="45" font-weight="600">The Sociotechnical</text>
+  <text class="a" style="--d:.1s" x="52" y="138" font-size="45" font-weight="600">Evaluation</text>
+  <text class="a" style="--d:.2s" x="52" y="190" font-size="45" font-weight="600">Framework.</text>
+  <!-- rings -->
+  <g id="ringOuter" class="pop" style="--d:.2s">
+    <circle cx="687" cy="384" r="262" fill="none" stroke="#3b4048" stroke-width="2"/>
+    <circle cx="687" cy="384" r="244" fill="none" stroke="#f5b335" stroke-width="22"/>
+    <circle cx="687" cy="384" r="226" fill="none" stroke="#3b4048" stroke-width="2"/>
+  </g>
+  <g id="ringMid" class="pop" style="--d:.4s">
+    <circle cx="687" cy="384" r="190" fill="none" stroke="#3b4048" stroke-width="2"/>
+    <circle cx="687" cy="384" r="180" fill="none" stroke="#1cc4de" stroke-width="20"/>
+    <circle cx="687" cy="384" r="170" fill="none" stroke="#3b4048" stroke-width="2"/>
+  </g>
+  <g id="ringInner" class="pop" style="--d:.6s">
+    <circle cx="687" cy="384" r="122" fill="none" stroke="#3b4048" stroke-width="2"/>
+    <circle cx="687" cy="384" r="118" fill="none" stroke="#1cc4de" stroke-width="8"/>
+    <circle cx="687" cy="384" r="108" fill="#3b4048"/>
+  </g>
+  <!-- leaders -->
+  <path class="dr" pathLength="1" style="--d:1s" d="M772 303 L820 255 L985 143" fill="none" stroke="#3b4048" stroke-width="2"/>
+  <circle class="pop" style="--d:1.1s" cx="820" cy="255" r="6" fill="#3b4048"/>
+  <path class="dr" pathLength="1" style="--d:1.1s" d="M798 384 H985" fill="none" stroke="#3b4048" stroke-width="2"/>
+  <circle class="pop" style="--d:1.2s" cx="798" cy="384" r="6" fill="#3b4048"/>
+  <path class="dr" pathLength="1" style="--d:1.2s" d="M855 568 L910 624 H985" fill="none" stroke="#3b4048" stroke-width="2"/>
+  <circle class="pop" style="--d:1.3s" cx="855" cy="568" r="6" fill="#3b4048"/>
+  <!-- callouts (hover highlights matching ring) -->
+  <g class="callout a" data-ring="ringMid" style="--d:1.2s">
+    <rect x="987" y="66" width="336" height="156" fill="#f6f6f2" stroke="#3b4048" stroke-width="2"/>
+    <rect x="987" y="66" width="336" height="35" fill="#f5b335" stroke="#3b4048" stroke-width="2"/>
+    <text class="m" x="1001" y="90" font-size="18">LAYER 2: HUMAN INTERACTION</text>
+    <text x="1001" y="134" font-size="19" font-weight="600">How do users and agents collaborate?</text>
+    <text x="1001" y="160" font-size="18">Measures multi-turn, stateful loops.</text>
+    <text x="1001" y="184" font-size="18">Beware the Sim2Real gap (simulated</text>
+    <text x="1001" y="207" font-size="18">users acting artificially cooperative).</text>
+  </g>
+  <g class="callout a" data-ring="ringInner" style="--d:1.35s">
+    <rect x="987" y="313" width="336" height="140" fill="#f6f6f2" stroke="#3b4048" stroke-width="2"/>
+    <rect x="987" y="313" width="336" height="36" fill="#22c5df" stroke="#3b4048" stroke-width="2"/>
+    <text class="m" x="1001" y="337" font-size="18">LAYER 1: TECHNICAL CAPABILITIES</text>
+    <text x="1001" y="383" font-size="19" font-weight="600">Can the agent do the task?</text>
+    <text x="1001" y="411" font-size="18">Focuses on lab evaluations, automation</text>
+    <text x="1001" y="434" font-size="18">limits, and technical constraints.</text>
+  </g>
+  <g class="callout a" data-ring="ringOuter" style="--d:1.5s">
+    <rect x="987" y="538" width="336" height="169" fill="#f6f6f2" stroke="#3b4048" stroke-width="2"/>
+    <rect x="987" y="538" width="336" height="35" fill="#3b4048" stroke="#3b4048" stroke-width="2"/>
+    <text class="m" x="1001" y="562" font-size="18" fill="#f6f6f2">LAYER 3: SYSTEMIC IMPACT</text>
+    <text x="1001" y="614" font-size="19" font-weight="600">How does the system change behavior?</text>
+    <text x="1001" y="641" font-size="18">Measures effects on institutional</text>
+    <text x="1001" y="663" font-size="18">incentives, organizational structures,</text>
+    <text x="1001" y="686" font-size="18">and economic outcomes over time.</text>
+  </g>
+</svg></div></section>
+
+<!-- ============ SLIDE 14: HUMAN BASELINES (interactive) ============ -->
+<section class="slide" id="s14"><div class="stage"><svg viewBox="0 0 1376 768">
+  <defs><linearGradient id="gArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22c5df" stop-opacity=".6"/><stop offset="1" stop-color="#22c5df" stop-opacity=".05"/></linearGradient></defs>
+  <rect class="fade" x="22" y="18" width="1332" height="728" fill="none" stroke="#3b3f47" stroke-width="2"/>
+  <text class="a" x="80" y="112" font-size="52" textLength="928" lengthAdjust="spacingAndGlyphs">Contextualizing via Human Baselines</text>
+  <text class="a" style="--d:.2s" x="80" y="160" font-size="24">Evaluators are now quantifying agent capability in terms of human time saved.</text>
+  <g stroke="#dedfd8" stroke-width="2" class="fade">
+    <line x1="212" y1="208" x2="212" y2="646"/><line x1="385" y1="208" x2="385" y2="646"/><line x1="556" y1="208" x2="556" y2="646"/>
+    <line x1="727" y1="208" x2="727" y2="646"/><line x1="898" y1="208" x2="898" y2="646"/>
+    <line x1="180" y1="240" x2="975" y2="240"/><line x1="180" y1="342" x2="975" y2="342"/><line x1="180" y1="443" x2="975" y2="443"/><line x1="180" y1="545" x2="975" y2="545"/>
+  </g>
+  <rect class="fade" style="--d:.5s" x="675" y="648" width="105" height="36" fill="#22c5df"/>
+  <g id="s14area"></g>
+  <line x1="180" y1="208" x2="180" y2="646" stroke="#1c2330" stroke-width="2"/>
+  <line x1="180" y1="646" x2="975" y2="646" stroke="#1c2330" stroke-width="2"/>
+  <line class="fade" x1="180" y1="443" x2="975" y2="443" stroke="#1c2330" stroke-width="2" stroke-dasharray="7 6"/>
+  <line class="fade" x1="727" y1="443" x2="727" y2="646" stroke="#1c2330" stroke-width="2" stroke-dasharray="7 6"/>
+  <g class="m fade" font-size="18" text-anchor="end"><text x="165" y="246">100%</text><text x="165" y="348">75%</text><text x="165" y="449">50%</text><text x="165" y="551">25%</text><text x="165" y="652">0%</text></g>
+  <text class="m fade" transform="translate(100 427) rotate(-90)" font-size="18" text-anchor="middle">Probability of success (0% to 100%)</text>
+  <g class="m fade" font-size="18" text-anchor="middle"><text x="212" y="672">1 min</text><text x="385" y="672">10 min</text><text x="556" y="672">1 hour</text><text x="727" y="672">10 hours</text><text x="898" y="672">100 hours</text></g>
+  <text class="m fade" x="577" y="712" font-size="19" text-anchor="middle">Task duration for a human expert (log scale)</text>
+  <g id="s14mark"></g>
+  <rect class="fade" x="531" y="528" width="182" height="70" fill="#22c5df"/>
+  <text class="m fade b" x="700" y="558" font-size="22" text-anchor="end">The 50%</text>
+  <text class="m fade b" x="700" y="584" font-size="22" text-anchor="end">Time Horizon</text>
+  <!-- metric box -->
+  <rect class="fade" x="1020" y="208" width="298" height="404" fill="none" stroke="#4b515c" stroke-width="2"/>
+  <line x1="1020" y1="256" x2="1318" y2="256" stroke="#4b515c" stroke-width="2"/>
+  <text class="m" x="1038" y="240" font-size="21">The Metric:</text>
+  <g class="a" style="--d:.6s" font-size="22">
+    <text x="1040" y="308">The Task-Completion</text><text x="1040" y="336">Time Horizon tracks</text>
+    <text x="1040" y="364">the exact task</text><text x="1040" y="392">duration at which an</text>
+    <text x="1040" y="419">agent is predicted to</text><text x="1040" y="447">succeed with a 50% or</text>
+    <text x="1040" y="475">80% reliability</text><text x="1040" y="503">threshold.</text>
+    <text x="1040" y="558">We are no longer just</text><text x="1040" y="585">asking "Did it pass?"</text>
+  </g>
+</svg>
+  <div class="ov">
+    <div class="c" style="left:calc(1020/1376*100%);top:calc(628/768*100%);width:calc(298/1376*100%)">
+      <div>Task length: <b id="s14lbl"></b></div>
+      <input id="s14r" type="range" min="0" max="100" value="62">
+      <div id="s14out"></div>
+    </div>
+  </div>
+</div></section>
+
+<!-- ============ SLIDE 15: BLUEPRINT ============ -->
+<section class="slide" id="s15"><div class="stage"><svg viewBox="0 0 1376 768">
+  <rect class="fade" x="22" y="18" width="1332" height="728" fill="none" stroke="#3b4048" stroke-width="2"/>
+  <g class="fade" stroke="#c9ccc4" stroke-width="2" fill="none" opacity=".7"><circle cx="1180" cy="380" r="150"/><circle cx="1180" cy="380" r="210"/><circle cx="1180" cy="380" r="270"/></g>
+  <path class="fade" d="M1180 60 L1240 90 L1300 60 M1240 90 V130" stroke="#9aa0aa" stroke-width="2" fill="none"/>
+  <text class="a" x="80" y="112" font-size="48">The Blueprint for Agent Evaluation.</text>
+  <line x1="22" y1="162" x2="1354" y2="162" stroke="#3b4048" stroke-width="2"/>
+  <line x1="466" y1="162" x2="466" y2="685" stroke="#3b4048" stroke-width="2"/>
+  <line x1="910" y1="162" x2="910" y2="685" stroke="#3b4048" stroke-width="2"/>
+  <line x1="22" y1="685" x2="1354" y2="685" stroke="#3b4048" stroke-width="2"/>
+  <text class="a m" style="--d:.2s" x="80" y="240" font-size="28" fill="#22b5cf">Shift the Mindset</text>
+  <text class="a m" style="--d:.35s" x="510" y="240" font-size="28" fill="#22b5cf">Upgrade the Rigor</text>
+  <text class="a m" style="--d:.5s" x="950" y="240" font-size="28" fill="#22b5cf">Broaden the Scope</text>
+  <g class="a" style="--d:.6s" font-size="28">
+    <text x="80" y="309">•</text><text x="100" y="309">Stop grading isolated</text><text x="100" y="342">outcomes.</text>
+    <text x="80" y="390">•</text><text x="100" y="390">Evaluate compounding,</text><text x="100" y="421">multi-step trajectories.</text>
+    <text x="80" y="472">•</text><text x="100" y="472">Measure Cost, Latency,</text><text x="100" y="503">and Reliability alongside</text><text x="100" y="535">Accuracy.</text>
+  </g>
+  <g class="a" style="--d:.8s" font-size="28">
+    <text x="510" y="309">•</text><text x="530" y="309">Disaggregate model vs.</text><text x="530" y="341">scaffold effects via factorial</text><text x="530" y="373">design.</text>
+    <text x="510" y="425">•</text><text x="530" y="425">Demand pass^k consistency,</text><text x="530" y="457">not just pass@k flukes.</text>
+    <text x="510" y="506">•</text><text x="530" y="506">Use log telemetry to catch</text><text x="530" y="538">search-time contamination</text><text x="530" y="570">and reward hacking.</text>
+  </g>
+  <g class="a" style="--d:1s" font-size="28">
+    <text x="950" y="309">•</text><text x="970" y="309">Move beyond technical</text><text x="970" y="341">capabilities.</text>
+    <text x="950" y="393">•</text><text x="970" y="393">Test human-agent</text><text x="970" y="423">interaction and account for the</text><text x="970" y="453">Sim2Real gap.</text>
+    <text x="950" y="506">•</text><text x="970" y="506">Contextualize success</text><text x="970" y="538">against human time horizons</text><text x="970" y="570">and systemic economic</text><text x="970" y="602">impact.</text>
+  </g>
+  <text class="m fade" style="--d:1.6s" x="55" y="724" font-size="22" fill="#1c2330">EVALUATION_PROTOCOL // STATUS: FINALIZED // END_OF_FILE</text>
+</svg></div></section>
+
+</div>
+<nav id="dots"></nav>
+
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+const mk = (tag, attrs, parent) => {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+};
+
+/* ---------- slide 2: left saturation chart (interactive) ---------- */
+(function () {
+  const g = document.getElementById('s2c');
+  const ox = 183, oy = 1282, pw = 995, ph = 902, CEIL = 89;
+  const X = x => ox + x / 10 * pw, Y = p => oy - p / 100 * ph;
+  for (let i = 0; i <= 10; i++) mk('line', { x1: X(i), y1: Y(0), x2: X(i), y2: Y(100), stroke: '#dedfd8', 'stroke-width': 2 }, g);
+  for (let j = 0; j <= 10; j++) mk('line', { x1: X(0), y1: Y(j * 10), x2: X(10), y2: Y(j * 10), stroke: '#dedfd8', 'stroke-width': 2 }, g);
+  mk('line', { x1: ox, y1: oy, x2: ox, y2: Y(104), stroke: '#111', 'stroke-width': 5 }, g);
+  mk('polygon', { points: `${ox-14},${Y(102)} ${ox+14},${Y(102)} ${ox},${Y(109)}`, fill: '#111' }, g);
+  mk('line', { x1: ox, y1: oy, x2: X(10.2), y2: oy, stroke: '#111', 'stroke-width': 5 }, g);
+  mk('polygon', { points: `${X(10.6)},${oy} ${X(10.2)-16},${oy-14} ${X(10.2)-16},${oy+14}`, fill: '#111' }, g);
+  const T = (x, y, s, o = {}) => { const t = mk('text', Object.assign({ x, y }, o), g); t.textContent = s; return t; };
+  const mono = { 'font-family': 'JetBrains Mono, Menlo, monospace', fill: '#1c2330' };
+  const sans = { 'font-family': 'Inter, Arial, sans-serif', fill: '#1c2330' };
+  T(150, 835, 'BENCHMARK SCORE', Object.assign({ transform: 'rotate(-90 150 835)', 'text-anchor': 'middle', 'font-size': 33 }, mono));
+  T(685, 1345, 'SUCCESSIVE MODEL RELEASES', Object.assign({ 'text-anchor': 'middle', 'font-size': 33 }, mono));
+  mk('line', { x1: X(0), y1: Y(CEIL), x2: X(10), y2: Y(CEIL), stroke: '#111', 'stroke-width': 5, 'stroke-dasharray': '4 14' }, g);
+  mk('rect', { x: 676, y: 383, width: 484, height: 55, fill: '#c9cdd3', stroke: '#4b515c', 'stroke-width': 3 }, g);
+  T(698, 421, '99% SATURATION CEILING', Object.assign({ 'font-size': 32 }, mono));
+  mk('rect', { x: 654, y: 680, width: 506, height: 298, fill: '#c9cdd3', stroke: '#4b515c', 'stroke-width': 3 }, g);
+  [['Traditional evaluation:', 735], ['query model, collect', 785], ['response, grade it.', 835],
+   ['This paradigm is', 905], ['saturated.', 955]].forEach(([s, y]) => T(680, y, s, Object.assign({ 'font-size': 36 }, sans)));
+  mk('line', { x1: 183, y1: 1282, x2: 345, y2: 1190, stroke: '#6b7280', 'stroke-width': 6 }, g);
+  T(360, 1200, '...', Object.assign({ 'font-size': 40 }, mono));
+
+  const curves = [
+    { k: 0.9, p: 0.9, c: '#5f6672' }, { k: 0.7, p: 0.95, c: '#6b7280' }, { k: 0.5, p: 1.0, c: '#7a808c' },
+    { k: 0.35, p: 1.05, c: '#8a909b' }, { k: 0.22, p: 1.1, c: '#9aa0aa' }
+  ];
+  const f = (c, x) => CEIL * (1 - Math.exp(-c.k * Math.pow(x, c.p) * 1.6));
+  const dots = curves.map(c => mk('circle', { r: 11, fill: '#1c2330', stroke: '#f6f6f2', 'stroke-width': 3, opacity: 0 }, g));
+  const guide = mk('line', { y1: Y(0), y2: Y(100), stroke: '#22c5df', 'stroke-width': 4, 'stroke-dasharray': '8 8', opacity: 0 }, g);
+  curves.forEach((c, i) => {
+    let d = '';
+    for (let j = 0; j <= 100; j++) { const x = j / 10; d += (j ? 'L' : 'M') + X(x).toFixed(1) + ' ' + Y(f(c, x)).toFixed(1); }
+    mk('path', { d, fill: 'none', stroke: c.c, 'stroke-width': 7, 'stroke-linecap': 'round', pathLength: 1, class: 'dr', style: `--d:${0.15 * i}s` }, g);
+  });
+  const slider = document.getElementById('s2r'), rv = document.getElementById('s2rv');
+  function upd() {
+    const r = +slider.value, x = r / 12 * 10;
+    guide.setAttribute('x1', X(x)); guide.setAttribute('x2', X(x)); guide.setAttribute('opacity', 1);
+    curves.forEach((c, i) => { dots[i].setAttribute('cx', X(x)); dots[i].setAttribute('cy', Y(f(c, x))); dots[i].setAttribute('opacity', 1); });
+    rv.textContent = 'Release ' + r;
+  }
+  slider.addEventListener('input', upd); upd();
+})();
+
+/* ---------- slide 2: right trajectory graph (animated) ---------- */
+(function () {
+  const g = document.getElementById('s2f');
+  for (let x = 1350; x <= 2510; x += 80) mk('line', { x1: x, y1: 290, x2: x, y2: 1228, stroke: '#dedfd8', 'stroke-width': 3 }, g);
+  for (let y = 290; y <= 1228; y += 80) mk('line', { x1: 1330, y1: y, x2: 2510, y2: y, stroke: '#dedfd8', 'stroke-width': 3 }, g);
+  const B = '#3b63d8';
+  const branches = [
+    ['M1900 490 C1600 520 1480 560 1480 700 V930 C1480 960 1560 975 1655 980', 14],
+    ['M1930 490 C2200 520 2355 580 2355 700 V920 C2355 950 2280 975 2180 980', 14],
+    ['M1905 690 C1800 700 1720 700 1705 660', 7],
+    ['M1905 690 C1760 720 1670 735 1667 775 C1667 800 1760 805 1795 775 C1810 760 1830 730 1905 690', 7],
+    ['M1915 690 C1950 740 2000 760 2035 775', 6],
+    ['M1925 690 C2050 720 2120 740 2165 775', 6],
+    ['M1905 870 C1800 900 1730 930 1668 980', 7],
+    ['M1905 870 C1850 920 1830 960 1870 980', 7],
+    ['M1925 870 C2000 910 2100 940 2165 980', 7],
+    ['M1905 890 C1915 920 1960 930 1968 978 C1950 955 1935 935 1905 930', 6],
+    ['M1668 980 C1700 1040 1820 1070 1905 1085', 7],
+    ['M1870 980 C1890 1030 1900 1060 1915 1085', 7],
+    ['M2165 980 C2120 1050 2000 1070 1915 1085', 7]
+  ];
+  mk('path', { d: 'M1915 290 V1228', stroke: B, 'stroke-width': 18, fill: 'none' }, g);
+  branches.forEach(([d, w]) => {
+    mk('path', { d, stroke: B, 'stroke-width': w, fill: 'none', 'stroke-linecap': 'round' }, g);
+    mk('path', { d, stroke: '#9db3f5', 'stroke-width': Math.max(2, w / 3), fill: 'none', 'stroke-linecap': 'round', class: 'mv', opacity: .9 }, g);
+  });
+  mk('circle', { cx: 1705, cy: 655, r: 14, fill: B }, g);
+  mk('circle', { cx: 1667, cy: 775, r: 12, fill: B }, g);
+  mk('circle', { cx: 1968, cy: 978, r: 12, fill: B }, g);
+  mk('polygon', { points: '1466,760 1494,760 1480,788', fill: B }, g);
+  mk('polygon', { points: '1645,966 1668,980 1645,994', fill: B }, g);
+  mk('polygon', { points: '2346,900 2364,900 2355,922', fill: B }, g);
+  const hex = (cx, cy, r) => Array.from({ length: 6 }, (_, i) => {
+    const a = Math.PI / 3 * i + Math.PI / 6;
+    return (cx + r * Math.cos(a)).toFixed(1) + ',' + (cy + r * Math.sin(a)).toFixed(1);
+  }).join(' ');
+  const nodes = [
+    [460, ['PLAN OVER EXTENDED', 'TIME HORIZONS']], [655, ['EXECUTE EXTERNAL', 'TOOL CALLS']],
+    [850, ['NAVIGATE STATEFUL', 'ENVIRONMENTS']], [1125, ['GENERATE A DYNAMIC', 'TRAJECTORY']]
+  ];
+  nodes.forEach(([y, lines]) => {
+    mk('polygon', { points: hex(1915, y, 28), fill: B, stroke: '#1c2330', 'stroke-width': 2, class: 'node' }, g);
+    lines.forEach((s, i) => {
+      const t = mk('text', { x: 1955, y: y - 8 + i * 34, 'font-family': 'JetBrains Mono, Menlo, monospace', 'font-size': 29, fill: '#1c2330' }, g);
+      t.textContent = s;
+    });
+  });
+})();
+
+/* ---------- slide 7: scatter with Pareto frontier ---------- */
+(function () {
+  const g = document.getElementById('s7pts');
+  const dom = [[371,337],[448,311],[526,278],[549,331],[483,362],[492,378],[379,392],[459,400],[405,412],[383,444],[486,453],[535,482],[577,394],[593,404],[555,402],[569,428],[538,410],[621,412],[634,366],[590,428],[630,434],[654,424],[672,435],[696,420],[717,443],[653,455],[620,468],[676,488],[689,498],[716,483],[743,494],[749,463],[781,470],[816,460],[828,488],[763,512],[883,512],[917,481],[1076,536],[577,455],[632,462],[556,412],[612,377]];
+  const par = [[208,444],[250,338],[320,274],[411,237],[504,220]];
+  dom.forEach(([x, y], i) => {
+    const c = mk('circle', { cx: x, cy: y, r: 8, fill: '#5b6270', class: 'pop', style: `--d:${(0.9 + i * 0.02).toFixed(2)}s` }, g);
+    mk('title', {}, c).textContent = `Dominated agent: cost ${x}, accuracy ${y}`;
+  });
+  par.forEach(([x, y], i) => {
+    const c = mk('circle', { cx: x, cy: y, r: 10, fill: '#1f3fe0', class: 'pop', style: `--d:${(0.4 + i * 0.15).toFixed(2)}s` }, g);
+    mk('title', {}, c).textContent = 'Pareto-optimal agent';
+  });
+})();
+
+/* ---------- slide 9: animated checkmarks ---------- */
+(function () {
+  const g = document.getElementById('chkWrap');
+  const cx = [954, 1085, 1216], cy = [350, 443, 536];
+  let n = 0;
+  cy.forEach(y => cx.forEach(x => {
+    mk('path', { d: 'M-30 2 L-8 26 L30 -26', transform: `translate(${x} ${y})`, pathLength: 1, class: 'dr', style: `--d:${(1.0 + n * 0.12).toFixed(2)}s`, stroke: '#2fb8cc', fill: 'none' }, g);
+    n++;
+  }));
+})();
+
+/* ---------- slide 13: hover a callout to highlight its ring ---------- */
+document.querySelectorAll('.callout').forEach(c => {
+  const ring = document.getElementById(c.dataset.ring);
+  c.addEventListener('mouseenter', () => ring && ring.classList.add('hot'));
+  c.addEventListener('mouseleave', () => ring && ring.classList.remove('hot'));
+});
+
+/* ---------- slide 14: human time-horizon curve (interactive) ---------- */
+(function () {
+  const area = document.getElementById('s14area'), mark = document.getElementById('s14mark');
+  const X = u => 212 + 171 * u, Y = p => 646 - 406 * p;
+  const P = u => 1 / (1 + Math.exp(1.1 * (u - 2.778)));
+  let d = '';
+  for (let u = -0.19; u <= 4.46; u += 0.02) d += (d ? 'L' : 'M') + X(u).toFixed(1) + ' ' + Y(P(u)).toFixed(1);
+  area.innerHTML = `<path d="${d} L975 646 L180 646 Z" fill="url(#gArea)"/><path d="${d}" fill="none" stroke="#22c5df" stroke-width="4"/>`;
+  const r = document.getElementById('s14r'), lbl = document.getElementById('s14lbl'), out = document.getElementById('s14out');
+  const fmt = m => {
+    if (m < 60) return Math.round(m) + ' min';
+    const h = m / 60;
+    if (h < 48) return (h < 10 ? h.toFixed(1) : Math.round(h)) + ' hours';
+    return Math.round(h / 24) + ' days';
+  };
+  function upd() {
+    const u = +r.value / 100 * 4.46, p = P(u), x = X(u), y = Y(p);
+    mark.innerHTML = `<line x1="${x}" y1="${y}" x2="${x}" y2="646" stroke="#1c2330" stroke-width="2" stroke-dasharray="3 4"/>
+      <circle cx="${x}" cy="${y}" r="10" fill="#1c2330" stroke="#f3f3ee" stroke-width="3"/>`;
+    lbl.textContent = fmt(Math.pow(10, u));
+    out.textContent = Math.round(p * 100) + '% chance of success';
+  }
+  r.addEventListener('input', upd); upd();
+})();
+
+/* ---------- navigation: one slide per screen, animate on entry ---------- */
+(function () {
+  const deck = document.getElementById('deck');
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const dots = document.getElementById('dots');
+  slides.forEach((s, i) => {
+    const d = document.createElement('span');
+    d.title = 'Slide ' + (i + 1);
+    d.addEventListener('click', () => s.scrollIntoView({ behavior: 'smooth' }));
+    dots.appendChild(d);
+  });
+  const dotEls = Array.from(dots.children);
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      e.target.classList.toggle('on', e.isIntersecting && e.intersectionRatio > 0.6);
+      if (e.isIntersecting && e.intersectionRatio > 0.6) {
+        dotEls.forEach((d, i) => d.classList.toggle('act', slides[i] === e.target));
+      }
+    });
+  }, { root: deck, threshold: [0, 0.6, 1] });
+  slides.forEach(s => io.observe(s));
+  const cur = () => Math.round(deck.scrollTop / window.innerHeight);
+  const go = i => slides[Math.max(0, Math.min(slides.length - 1, i))].scrollIntoView({ behavior: 'smooth' });
+  document.addEventListener('keydown', e => {
+    if (['ArrowDown', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); go(cur() + 1); }
+    if (['ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); go(cur() - 1); }
+    if (e.key === 'Home') go(0);
+    if (e.key === 'End') go(slides.length - 1);
+  });
+})();
+</script>
+</body>
+</html>

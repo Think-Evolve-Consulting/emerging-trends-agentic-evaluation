@@ -33,6 +33,8 @@
   .modes{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--panel)}
   .modes button{border:0;background:transparent;padding:6px 14px;font-size:13px;color:var(--muted)}
   .modes button.on{background:var(--ink);color:var(--bg)}
+  .deck{font-size:13px;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:6px 14px;background:var(--panel)}
+  .deck:hover{color:var(--ink)}
   .ctl{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);margin-left:auto;flex-wrap:wrap}
   select{font:inherit;font-size:13px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
   .prog{display:flex;align-items:center;gap:8px}
@@ -162,6 +164,7 @@
     <button data-mode="walk">Walkthrough</button>
     <button data-mode="concept">Concept links</button>
   </div>
+  <a class="deck" href="AI_Agent_Evaluation_Dynamic.html">Presentation ↗</a>
   <div class="ctl">
     <label>Lens <select id="lens">
       <option value="">All 33 trends</option>
